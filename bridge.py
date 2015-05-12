@@ -9,6 +9,18 @@ from threading import Thread
 import bridgeutils
 import bridgeserver
 
+import termios
+import atexit
+
+def enable_echo(fd, enabled):
+	(iflag, oflag, cflag, lflag, ispeed, ospeed, cc) = termios.tcgetattr(fd)
+	if enabled:
+		lflag |= termios.ECHO
+	else:
+		lflag &= ~termios.ECHO
+	new_attr = [iflag, oflag, cflag, lflag, ispeed, ospeed, cc]
+	termios.tcsetattr(fd, termios.TCSANOW, new_attr)
+
 #MAIN
 conf = {
 	"backlog" : 5, #this value must match number of enabled connectors (we could sizeof(connectors))
@@ -20,6 +32,7 @@ conf = {
 
 #shared dictionary
 shd = {}
+atexit.register(enable_echo, sys.stdin.fileno(), True)
 
 """
 #TODO here we have to:
@@ -42,6 +55,8 @@ server.start()
 we have to start another thread to control bridge status
 """
 logger = logging.getLogger("server")
+
+enable_echo(sys.stdin, False)
 
 #we must add handling method for CRC communication
 while True:
