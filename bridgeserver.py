@@ -25,7 +25,7 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 	def handle_read(self):
 		msg = self.recv(1024)
 		position = self.shm[self.name].put_message(msg.rstrip())
-		self.send("200;%d" % position)
+		self.send("200;%d\r\n" % position)
 
 	def handle_write(self):
 		self.send(self.data)

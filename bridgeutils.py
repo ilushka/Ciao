@@ -28,7 +28,7 @@ class BridgeConnector(object):
 	def get_message(self):
 		if len(self.fifo) > 0:
 			position = self.fifo.pop(0)
-			return position, self.stash[position]
+			return ";".join(map(str,[position, self.stash[position]]))
 		return False
 
 	def put_message(self, message):

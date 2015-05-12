@@ -54,10 +54,10 @@ while True:
 		bc = params[0]
 		action = params[1]
 		if bc in conf['connectors']:
-			if shd[bc].is_registered() and action in allowed_actions:
+			if shd[bc].is_registered():
 				if action == "r":
 					if shd[bc].has_message():
-						print shd[bc].get_message()
+						print "1;"+shd[bc].get_message()
 					else:
 						print "0;no_message"
 				elif action == "w":
