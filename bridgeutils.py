@@ -1,12 +1,5 @@
-#from multiprocessing import Queue
 from Queue import Queue
 import socket
-"""
-try:
-    import cPickle as pickle
-except:
-    import pickle
-"""
 
 class BridgeConnector(object):
 	def __init__(self, name, queue, registered = False):
@@ -34,7 +27,7 @@ class BridgeConnector(object):
 
 	def get_message(self):
 		if len(self.fifo) > 0:
-			position = self.fifo.pop()
+			position = self.fifo.pop(0)
 			return position, self.stash[position]
 		return False
 
@@ -50,7 +43,19 @@ class BridgeConnector(object):
 
 	def unregister(self):
 		self.registered = False
-"""
-	def __reduce__(self):
-		return (self.__class__,(self.name, self.queue, self.is_registered))
-"""
+
+#utils methods
+def clean_command(command):
+	return command.rstrip()
+
+def get_params(command, logger):
+	logger.debug("get_params: %s" % command)
+	#explode command string in up to three pieces
+	return command.split(";", 2)
+
+def is_valid_command(params, logger):
+	allowed_actions = {"w":3, "r":2, "wr":3}
+	if len(params) > 1:
+		if params[1] in allowed_actions and len(params) >= allowed_actions[params[1]]:
+			return True
+	return False

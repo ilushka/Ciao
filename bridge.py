@@ -1,62 +1,59 @@
-import asyncore
-import socket
 import os
 import sys
 import logging
-#from multiprocessing import Process, Manager, Queue
-#from multiprocessing.managers import SyncManager
+import asyncore
+import socket
 from Queue import Queue
 from threading import Thread
-from bridgeutils import BridgeConnector
+
+import bridgeutils
 import bridgeserver
 
 #MAIN
 conf = {
-	"backlog" : 5, #this value must match number of enabled connectors (we could sizeof(modules))
+	"backlog" : 5, #this value must match number of enabled connectors (we could sizeof(connectors))
 	"srvhost" : "localhost",
 	"srvport" : 8900,
-	"logfile" : "test.log",
-	"modules" : ['xmpp']
+	"logfile" : "bridge.log",
+	"connectors" : ['xmpp']
 }
 
 #shared dictionary
 shd = {}
 
 """
-#TODO we should:
+#TODO here we have to:
 	- load bridge_config
 	- scan SOMEDIR_CONF for connector configuration (bridge-side)
 """
 
-#this is the connector used to interact with serial (tty)
-shd['serial'] = BridgeConnector("serial", Queue())
+#this connector could be used to interact with bridge (tty)
+shd['bridge'] = bridgeutils.BridgeConnector("bridge", Queue())
 
-for m in conf['modules']:
-	shd[m] = BridgeConnector(m, Queue())
+for c in conf['connectors']:
+	shd[c] = bridgeutils.BridgeConnector(c, Queue())
 
-bridge = Thread(name="server", target=bridgeserver.init, args=(conf,shd,))
-bridge.daemon = True
-bridge.start()
+server = Thread(name="server", target=bridgeserver.init, args=(conf,shd,))
+server.daemon = True
+server.start()
 
 """
 #TODO
 we have to start another thread to control bridge status
 """
-allowed_actions = ["w", "r", "wr"]
 logger = logging.getLogger("server")
 
+#we must add handling method for CRC communication
 while True:
-	command = sys.stdin.readline()
-	command = command.rstrip()
-	logger.debug("%s" % command)
-	#split command in up to three elements (connector, action, command)
-	params = command.split(";",2)
-	for p in params:
-		logger.debug("%s" % p)
-	if len(params) == 3:
+	#reading from tty
+	cmd = sys.stdin.readline()
+	#clean and validate string
+	cmd = bridgeutils.clean_command(cmd)
+	params = bridgeutils.get_params(cmd, logger)
+	if bridgeutils.is_valid_command(params, logger):
 		bc = params[0]
-		if params[0] in conf['modules']:
-			action = params[1]
+		action = params[1]
+		if bc in conf['connectors']:
 			if shd[bc].is_registered() and action in allowed_actions:
 				if action == "r":
 					if shd[bc].has_message():
@@ -66,8 +63,10 @@ while True:
 				elif action == "w":
 					shd[bc].queue_push(params[2])
 			else:
-				logger.debug("required action for connector %s (not yet registered)" % params[0])
-		print command
+				logger.debug("Required action '%s' for connector %s (not yet registered)" % (action, bc))
+				print "-1;not_yet_registered"
+		else:
+			print "-1;unknown_connector"
 	else:
-		logger.debug("too few arguments from bridge(MCU): %s" % command)
-	
+		logger.debug("Too few arguments from bridge(MCU): %s" % cmd)
+		print "-1;wrong_params"

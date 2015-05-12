@@ -3,7 +3,7 @@ import socket
 import os
 import sys
 import logging
-from bridgeutils import BridgeConnector
+#from bridgeutils import BridgeConnector
 import json
 
 class BridgeHandler(asyncore.dispatcher_with_send):
