@@ -1,3 +1,6 @@
+#ADD LICENSE
+#ADD FEW LINES ABOUT PREFERRING TERMINAL OVER CRC communication
+
 import os
 import sys
 import logging
@@ -6,46 +9,44 @@ import socket
 from Queue import Queue
 from threading import Thread
 
-import bridgeutils
+from bridgeutils import *
 import bridgeserver
 
-import termios
 import atexit
 
-def enable_echo(fd, enabled):
-	(iflag, oflag, cflag, lflag, ispeed, ospeed, cc) = termios.tcgetattr(fd)
-	if enabled:
-		lflag |= termios.ECHO
-	else:
-		lflag &= ~termios.ECHO
-	new_attr = [iflag, oflag, cflag, lflag, ispeed, ospeed, cc]
-	termios.tcsetattr(fd, termios.TCSANOW, new_attr)
-
 #MAIN
-conf = {
-	"backlog" : 5, #this value must match number of enabled connectors (we could sizeof(connectors))
-	"srvhost" : "localhost",
-	"srvport" : 8900,
-	"logfile" : "bridge.log",
-	"connectors" : ['xmpp']
-}
-
-#shared dictionary
-shd = {}
-atexit.register(enable_echo, sys.stdin.fileno(), True)
-
+#configuration dictionary (will be read from file)
 """
 #TODO here we have to:
 	- load bridge_config
 	- scan SOMEDIR_CONF for connector configuration (bridge-side)
 """
+conf = {
+	"backlog" : 5, #this value must match number of enabled connectors (we could len(connectors))
+	"srvhost" : "localhost",
+	"srvport" : 8900,
+	"logfile" : "bridge.log",
+	"connectors" : {
+		"xmpp" : {
+			"implements" : {
+				"read" : "with_message",
+				"write" : "with_queue",
+				"writeresponse" : "with_queue"
+			}
+		}
+	}
+}
+
+#shared dictionary
+shd = {}
 
 #this connector could be used to interact with bridge (tty)
-shd['bridge'] = bridgeutils.BridgeConnector("bridge", Queue())
+shd['bridge'] = BridgeConnector("bridge", {}, Queue())
 
-for c in conf['connectors']:
-	shd[c] = bridgeutils.BridgeConnector(c, Queue())
+for connector, connector_conf in conf['connectors'].items():
+	shd[connector] = BridgeConnector(connector, connector_conf, Queue())
 
+#start bridgeserver (to interact with connectors)
 server = Thread(name="server", target=bridgeserver.init, args=(conf,shd,))
 server.daemon = True
 server.start()
@@ -56,13 +57,24 @@ we have to start another thread to control bridge status
 """
 logger = logging.getLogger("server")
 
+#disable echo on terminal 
 enable_echo(sys.stdin, False)
+#allow terminal echo to be enabled back when bridge exits
+atexit.register(enable_echo, sys.stdin.fileno(), True)
 
 #we must add handling method for CRC communication
 while True:
 	#reading from tty
-	cmd = sys.stdin.readline()
-	#clean and validate string
+	cmd = clean_command(sys.stdin.readline())
+	connector, action = is_valid_command(cmd)
+	if connector == False:
+		logger.debug("unknown command: %s" % cmd)
+	elif not connector in conf['connectors']:
+		logger.debug("unknown connector: %s" % cmd)
+	else:
+		shd[connector].run(action, cmd)
+
+"""
 	cmd = bridgeutils.clean_command(cmd)
 	params = bridgeutils.get_params(cmd, logger)
 	if bridgeutils.is_valid_command(params, logger):
@@ -85,3 +97,4 @@ while True:
 	else:
 		logger.debug("Too few arguments from bridge(MCU): %s" % cmd)
 		print "-1;wrong_params"
+"""
