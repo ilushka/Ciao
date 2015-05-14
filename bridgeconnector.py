@@ -1,39 +1,7 @@
-from Queue import Queue
-import socket
-import termios
 import logging
+import settings
+from Queue import Queue
 
-#SETTINGS
-allowed_actions = {
-	"r": { "params": 3, "map": "read"},				#requires 2 params - connector;action
-	"w": { "params": 3, "map": "write"},			#requires 3 params - connector;action;data
-	"wr": { "params": 4, "map": "writeresponse"}	#requires 4 params - connector;action;reference;data
-}
-
-#METHODS
-
-#enable/disable echo on tty
-def enable_echo(fd, enabled):
-	(iflag, oflag, cflag, lflag, ispeed, ospeed, cc) = termios.tcgetattr(fd)
-	if enabled:
-		lflag |= termios.ECHO
-	else:
-		lflag &= ~termios.ECHO
-	new_attr = [iflag, oflag, cflag, lflag, ispeed, ospeed, cc]
-	termios.tcsetattr(fd, termios.TCSANOW, new_attr)
-
-def clean_command(command):
-	return command.rstrip()
-
-def is_valid_command(command):
-	global allowed_actions
-	#a valid command must contain at least two fields: connector and action
-	elements = command.split(";", 2)
-	if len(elements) >= 2 and elements[1] in allowed_actions:
-		return elements
-	return False, False
-
-#CLASSES
 class BridgeConnector(object):
 	def __init__(self, name, conf, queue, registered = False):
 		self.name = name
@@ -85,12 +53,10 @@ class BridgeConnector(object):
 		return position
 
 	def run(self, short_action, command):
-		global allowed_actions
 		#retrieve real action value from short one (i.e. "r" => "read" )
-		action = allowed_actions[short_action]['map']
+		action = settings.allowed_actions[short_action]['map']
 		if action in self.implements:
 			params = command.split()
-			self.logger.debug("implements %s " % self.implements)
 			if self.implements[action] == 'with_queue':
 				self.queue_push(params[2])
 				print "1;done"

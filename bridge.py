@@ -1,41 +1,19 @@
 #ADD LICENSE
-#ADD FEW LINES ABOUT PREFERRING TERMINAL OVER CRC communication
+#ADD FEW LINES ABOUT PREFERRING inline communication OVER CRC communication
 
 import os
 import sys
 import logging
-import asyncore
-import socket
 from Queue import Queue
 from threading import Thread
-
-from bridgeutils import *
-import bridgeserver
-
 import atexit
 
+import settings
+from bridgeconnector import BridgeConnector
+import bridgeserver
+from utils import *
+
 #MAIN
-#configuration dictionary (will be read from file)
-"""
-#TODO here we have to:
-	- load bridge_config
-	- scan SOMEDIR_CONF for connector configuration (bridge-side)
-"""
-conf = {
-	"backlog" : 5, #this value must match number of enabled connectors (we could len(connectors))
-	"srvhost" : "localhost",
-	"srvport" : 8900,
-	"logfile" : "bridge.log",
-	"connectors" : {
-		"xmpp" : {
-			"implements" : {
-				"read" : "with_message",
-				"write" : "with_queue",
-				"writeresponse" : "with_queue"
-			}
-		}
-	}
-}
 
 #shared dictionary
 shd = {}
@@ -43,11 +21,11 @@ shd = {}
 #this connector could be used to interact with bridge (tty)
 shd['bridge'] = BridgeConnector("bridge", {}, Queue())
 
-for connector, connector_conf in conf['connectors'].items():
+for connector, connector_conf in settings.conf['connectors'].items():
 	shd[connector] = BridgeConnector(connector, connector_conf, Queue())
 
 #start bridgeserver (to interact with connectors)
-server = Thread(name="server", target=bridgeserver.init, args=(conf,shd,))
+server = Thread(name="server", target=bridgeserver.init, args=(settings.conf,shd,))
 server.daemon = True
 server.start()
 
@@ -69,7 +47,7 @@ while True:
 	connector, action = is_valid_command(cmd)
 	if connector == False:
 		logger.debug("unknown command: %s" % cmd)
-	elif not connector in conf['connectors']:
+	elif not connector in settings.conf['connectors']:
 		logger.debug("unknown connector: %s" % cmd)
 	else:
 		shd[connector].run(action, cmd)
