@@ -1,5 +1,7 @@
 import re
 
+debug = True
+
 allowed_actions = {
 	"r": { "params": 3, "map": "read"},				#requires 2 params - connector;action
 	"w": { "params": 3, "map": "write"},			#requires 3 params - connector;action;data

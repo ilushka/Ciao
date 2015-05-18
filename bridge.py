@@ -2,9 +2,7 @@
 #ADD LICENSE
 #ADD FEW LINES ABOUT PREFERRING inline communication OVER CRC communication
 
-import os
-import sys
-import logging
+import io, os, sys, logging
 from Queue import Queue
 from threading import Thread
 import atexit
@@ -36,19 +34,20 @@ we have to start another thread to control bridge status
 """
 logger = logging.getLogger("server")
 
-#disable echo on terminal 
-enable_echo(sys.stdin, False)
-#allow terminal echo to be enabled back when bridge exits
-atexit.register(enable_echo, sys.stdin.fileno(), True)
+if settings.debug:
+	handle = io.open("pippo", "r+b")
+	print "Starting bridge in DEBUG MODE"
+	logger.debug("Starting bridge in DEBUG MODE")
+else:
+	#disable echo on terminal 
+	enable_echo(sys.stdin, False)
+	
+	#allow terminal echo to be enabled back when bridge exits
+	atexit.register(enable_echo, sys.stdin.fileno(), True)
+	handle = io.open(sys.stdin.fileno(), "rb")
 
-import io
-#handle = io.open("pippo", "r+b")
-handle = io.open(sys.stdin.fileno(), "rb")
-
-#we could add handling method for CRC communication
 while True:
-	#reading from tty
-	#cmd = clean_command(sys.stdin.readline())
+	#reading from input device
 	cmd = clean_command(handle.readline())
 	if cmd:
 		logger.debug("%s" % cmd)

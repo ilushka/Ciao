@@ -12,10 +12,12 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 		self.logger = logging.getLogger("server")
 		self.name = name
 		self.shm = shm
-		self.logger.debug('BridgeHandler(%s) - started' % name)
 		self.shm[self.name].register()
 		self.data = ""
+		self.logger.debug('BridgeHandler(%s) - started' % name)
 
+	#this function must return true only if we have something
+	# to write - through socket - to the bridge connector
 	def writable(self):
 		entry = self.shm[self.name].queue_pull()
 		if entry:
@@ -33,27 +35,27 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 			self.logger.debug("string not empty but wrong: %s" % msg)
 		else:
 			position = self.shm[self.name].put_message(msg)
+			#we have to return output only if client doesn't specify otherwise
 			data = {
 				"status" : 200,
 				"queue_id": position
 			}
 			self.send(json.dumps(data))
-		#self.send("200;%d\r\n" % position)
 
 	def handle_write(self):
 		self.send(self.data)
 		self.data = ""
 
 	def handle_close(self):
-		#this must notify to server that this connector has disconnected
 		self.logger.debug('bridgehandler - ended')
 		self.close()
+		#notify to server that this connector has disconnected
 		self.shm[self.name].unregister()
 
 	def handle_error(self, type = None, value = None, traceback = None):
-		#this must notify to server that this connector has disconnected
 		#self.logger.debug('bridgehandler - ended(due to error) %s %s %s ' % type, value, traceback)
 		self.close()
+		#notify to server that this connector has disconnected
 		self.shm[self.name].unregister()
 
 class BridgeServer(asyncore.dispatcher):
@@ -77,7 +79,7 @@ class BridgeServer(asyncore.dispatcher):
 			sock, addr = pair
 			self.logger.debug('Incoming connection from %s', repr(addr))
 
-			#first of all new client has to present itself
+			#new client has to present itself (action:register)
 			hello = sock.recv(1024)
 			try:
 				data = json.loads(hello)		
@@ -107,4 +109,4 @@ class BridgeServer(asyncore.dispatcher):
 def init(conf, shm):
 	logging.basicConfig(filename=conf['logfile'],level=logging.DEBUG)
 	server = BridgeServer("server", conf, shm)
-	asyncore.loop(1)
+	asyncore.loop(0.05)
