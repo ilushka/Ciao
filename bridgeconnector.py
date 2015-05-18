@@ -59,13 +59,14 @@ class BridgeConnector(object):
 	def run(self, short_action, command):
 		#retrieve real action value from short one (i.e. "r" => "read" )
 		action = settings.allowed_actions[short_action]['map']
-		if action in self.implements:
+		if action in self.implements and self.is_registered():
 			params = command.split(";")
-			if len(params) > 2: #this must be properly fixed
-				data = array.array("B")
-				for c in params[2]:
-					data.append(c)
+			#this must be properly fixed
 			if self.implements[action] == 'with_queue':
+				data = array.array("B")
+				if len(params) > 2:
+					for c in params[2]:
+						data.append(ord(c))
 				data = json.dumps(unserialize(data))
 				self.queue_push(data)
 				print "1;done"

@@ -9,22 +9,24 @@ import os, tty, termios, sys
 from contextlib import contextmanager
 
 @contextmanager
-def cbreak():
-  if hasattr(sys.stdin, "fileno") and os.isatty(sys.stdin.fileno()):
-    old_attrs = termios.tcgetattr(stdin)
-    tty.setcbreak(stdin)
-    tty.setraw(stdin)
+def cbreak(fdinput): 
+  if hasattr(fdinput, "fileno") and os.isatty(fdinput.fileno()):
+    old_attrs = termios.tcgetattr(fdinput)
+    tty.setcbreak(fdinput)
+    tty.setraw(fdinput)
   try:
     yield
   finally:
-    if hasattr(sys.stdin, "fileno") and os.isatty(sys.stdin.fileno()):
-      termios.tcsetattr(stdin, termios.TCSADRAIN, old_attrs)
+    if hasattr(fdinput, "fileno") and os.isatty(fdinput.fileno()):
+      termios.tcsetattr(fdinput, termios.TCSADRAIN, old_attrs)
 
 #enable/disable echo on tty
 def enable_echo(fd, enabled):
 	(iflag, oflag, cflag, lflag, ispeed, ospeed, cc) = termios.tcgetattr(fd)
 	if enabled:
 		lflag |= termios.ECHO
+		tty.setcbreak(fd)
+		tty.setraw(fd)
 	else:
 		lflag &= ~termios.ECHO
 	new_attr = [iflag, oflag, cflag, lflag, ispeed, ospeed, cc]
@@ -38,7 +40,7 @@ def is_valid_command(command):
 	#a valid command must contain at least two fields: connector and action
 	elements = command.split(";", 2)
 	if len(elements) >= 2 and elements[1] in settings.allowed_actions:
-		return elements
+		return elements[:2]
 	return False, False
 
 #Serialization methods

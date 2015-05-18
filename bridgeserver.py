@@ -25,7 +25,12 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 	def handle_read(self):
 		msg = self.recv(1024)
 		position = self.shm[self.name].put_message(msg.rstrip())
-		self.send("200;%d\r\n" % position)
+		data = {
+			"status" : 200,
+			"queue_id": position
+		}
+		self.send(json.dumps(data))
+		#self.send("200;%d\r\n" % position)
 
 	def handle_write(self):
 		self.send(self.data)
@@ -37,9 +42,9 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 		self.close()
 		self.shm[self.name].unregister()
 
-	def handle_error(self, type, value, traceback):
+	def handle_error(self, type = None, value = None, traceback = None):
 		#this must notify to server that this connector has disconnected
-		self.logger.debug('bridgehandler - ended(due to error) %s %s %s ' % type, value, traceback)
+		#self.logger.debug('bridgehandler - ended(due to error) %s %s %s ' % type, value, traceback)
 		self.close()
 		self.shm[self.name].unregister()
 
