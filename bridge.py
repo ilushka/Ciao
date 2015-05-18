@@ -37,13 +37,13 @@ we have to start another thread to control bridge status
 logger = logging.getLogger("server")
 
 #disable echo on terminal 
-#enable_echo(sys.stdin, False)
+enable_echo(sys.stdin, False)
 #allow terminal echo to be enabled back when bridge exits
-#atexit.register(enable_echo, sys.stdin.fileno(), True)
+atexit.register(enable_echo, sys.stdin.fileno(), True)
 
 import io
 #handle = io.open("pippo", "r+b")
-handle = io.open(sys.stdin, "r+b")
+handle = io.open(sys.stdin.fileno(), "rb")
 
 #we could add handling method for CRC communication
 while True:

@@ -24,12 +24,20 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 
 	def handle_read(self):
 		msg = self.recv(1024)
-		position = self.shm[self.name].put_message(msg.rstrip())
-		data = {
-			"status" : 200,
-			"queue_id": position
-		}
-		self.send(json.dumps(data))
+		msg = msg.rstrip()
+		if msg == "":
+			return
+		try:
+			json.loads(msg)
+		except ValueError, e:
+			self.logger.debug("string not empty but wrong: %s" % msg)
+		else:
+			position = self.shm[self.name].put_message(msg)
+			data = {
+				"status" : 200,
+				"queue_id": position
+			}
+			self.send(json.dumps(data))
 		#self.send("200;%d\r\n" % position)
 
 	def handle_write(self):
