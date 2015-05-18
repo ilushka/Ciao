@@ -10,9 +10,9 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 	def __init__(self, sock, name, shm):
 		asyncore.dispatcher_with_send.__init__(self, sock)
 		self.logger = logging.getLogger("server")
-		self.logger.debug('bridgehandler - started')
 		self.name = name
 		self.shm = shm
+		self.logger.debug('BridgeHandler(%s) - started' % name)
 		self.shm[self.name].register()
 		self.data = ""
 

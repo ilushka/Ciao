@@ -1,6 +1,10 @@
 import logging
 import settings
+import json
+import sys
+import os
 from Queue import Queue
+from utils import *
 
 class BridgeConnector(object):
 	def __init__(self, name, conf, queue, registered = False):
@@ -43,7 +47,7 @@ class BridgeConnector(object):
 	def get_message(self):
 		if len(self.fifo) > 0:
 			position = self.fifo.pop(0)
-			return ";".join(map(str,[position, self.stash[position]]))
+			return position, self.stash[position]
 		return False
 
 	def put_message(self, message):
@@ -56,13 +60,22 @@ class BridgeConnector(object):
 		#retrieve real action value from short one (i.e. "r" => "read" )
 		action = settings.allowed_actions[short_action]['map']
 		if action in self.implements:
-			params = command.split()
+			params = command.split(";")
+			if len(params) > 2: #this must be properly fixed
+				data = array.array("B")
+				for c in params[2]:
+					data.append(c)
 			if self.implements[action] == 'with_queue':
-				self.queue_push(params[2])
+				data = json.dumps(unserialize(data))
+				self.queue_push(data)
 				print "1;done"
 			elif self.implements[action] == 'with_message':
 				if self.has_message():
-					print "1;"+self.get_message()
+					pos, msg = self.get_message()
+					msg = json.loads(msg)
+					os.write(sys.stdout.fileno(), "1;"+str(pos)+";")
+					output = serialize(msg)
+					os.write(sys.stdout.fileno(), output.tostring())
 				else:
 					print "0;no_message"
 			else:

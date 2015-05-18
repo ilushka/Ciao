@@ -1,3 +1,5 @@
+import re
+
 allowed_actions = {
 	"r": { "params": 3, "map": "read"},				#requires 2 params - connector;action
 	"w": { "params": 3, "map": "write"},			#requires 3 params - connector;action;data
@@ -25,3 +27,7 @@ conf = {
 		}
 	}
 }
+
+#serialization settings
+entry_separator = chr(30)	#ASCII code for GroupSeparator
+keyvalue_separator = chr(31)	#ASCII code for UnitSeparator

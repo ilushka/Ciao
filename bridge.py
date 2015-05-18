@@ -40,7 +40,8 @@ enable_echo(sys.stdin, False)
 #allow terminal echo to be enabled back when bridge exits
 atexit.register(enable_echo, sys.stdin.fileno(), True)
 
-#we must add handling method for CRC communication
+#we could add handling method for CRC communication
+#with cbreak():
 while True:
 	#reading from tty
 	cmd = clean_command(sys.stdin.readline())
@@ -51,28 +52,3 @@ while True:
 		logger.debug("unknown connector: %s" % cmd)
 	else:
 		shd[connector].run(action, cmd)
-
-"""
-	cmd = bridgeutils.clean_command(cmd)
-	params = bridgeutils.get_params(cmd, logger)
-	if bridgeutils.is_valid_command(params, logger):
-		bc = params[0]
-		action = params[1]
-		if bc in conf['connectors']:
-			if shd[bc].is_registered():
-				if action == "r":
-					if shd[bc].has_message():
-						print "1;"+shd[bc].get_message()
-					else:
-						print "0;no_message"
-				elif action == "w":
-					shd[bc].queue_push(params[2])
-			else:
-				logger.debug("Required action '%s' for connector %s (not yet registered)" % (action, bc))
-				print "-1;not_yet_registered"
-		else:
-			print "-1;unknown_connector"
-	else:
-		logger.debug("Too few arguments from bridge(MCU): %s" % cmd)
-		print "-1;wrong_params"
-"""
