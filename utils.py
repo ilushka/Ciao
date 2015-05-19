@@ -8,6 +8,7 @@ import settings
 import os, tty, termios, sys
 from contextlib import contextmanager
 
+"""
 @contextmanager
 def cbreak(fdinput): 
   if hasattr(fdinput, "fileno") and os.isatty(fdinput.fileno()):
@@ -19,6 +20,7 @@ def cbreak(fdinput):
   finally:
     if hasattr(fdinput, "fileno") and os.isatty(fdinput.fileno()):
       termios.tcsetattr(fdinput, termios.TCSADRAIN, old_attrs)
+"""
 
 #enable/disable echo on tty
 def enable_echo(fd, enabled):
@@ -60,8 +62,15 @@ def serialize(data):
 	return s
 
 #unserialize passed dict/list, atm it works only for one level object not nested ones
-def unserialize(source):
-	data = array.array("B", source)
+def unserialize(source, from_array = True):
+	#create a clone of original array or a new one from a string
+	if from_array:
+		data = array.array("B", source)
+	else:
+		data = array.array("B")
+		for c in source:
+			data.append(ord(c))
+
 	#identifying data type
 	try:
 		index = data.index(ord(settings.keyvalue_separator))
