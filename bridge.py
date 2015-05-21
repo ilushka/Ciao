@@ -12,8 +12,6 @@ from bridgeconnector import BridgeConnector
 import bridgeserver
 from utils import *
 
-#MAIN
-
 #shared dictionary
 shd = {}
 

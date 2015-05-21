@@ -1,9 +1,5 @@
-import asyncore
-import socket
-import os
-import sys
-import logging
-#from bridgeutils import BridgeConnector
+import os, sys, logging
+import socket, asyncore
 import json
 
 class BridgeHandler(asyncore.dispatcher_with_send):
@@ -14,7 +10,7 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 		self.shm = shm
 		self.shm[self.name].register()
 		self.data = ""
-		self.logger.debug('BridgeHandler(%s) - started' % name)
+		self.logger.debug('BridgeHandler(%s) - started' % self.name)
 
 	#this function must return true only if we have something
 	# to write - through socket - to the bridge connector
@@ -32,7 +28,7 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 		try:
 			json.loads(msg)
 		except ValueError, e:
-			self.logger.debug("string not empty but wrong: %s" % msg)
+			self.logger.debug("String not empty but not JSON: %s" % msg)
 		else:
 			position = self.shm[self.name].put_message(msg)
 			#we have to return output only if client doesn't specify otherwise
@@ -47,12 +43,12 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 		self.data = ""
 
 	def handle_close(self):
-		self.logger.debug('bridgehandler - ended')
-		self.close()
+		self.logger.debug('BridgeHandler(%s) - ended' % self.name)
 		#notify to server that this connector has disconnected
 		self.shm[self.name].unregister()
 
 	def handle_error(self, type = None, value = None, traceback = None):
+		self.logger.debug('BridgeHandler(%s) - error' % self.name)
 		#self.logger.debug('bridgehandler - ended(due to error) %s %s %s ' % type, value, traceback)
 		self.close()
 		#notify to server that this connector has disconnected
@@ -93,17 +89,14 @@ class BridgeServer(asyncore.dispatcher):
 						sock.close()
 					else:
 						handler = BridgeHandler(sock, data['name'], self.shm)
-						#self.shm[data['name']].register(handler)
 						self.clients.append(handler)
-						#handler.send("welcome on %s\r\n" % self.srv_name)
 			except ValueError, e:
 				self.logger.debug('Exception: new client not presented properly %s' % hello)
 				sock.close()
-			#self.broadcast_message(handler, "%s:%s just entered\r\n" % addr)
 
-	def broadcast_message(self, new_client, message):
+	def broadcast_message(self, source_client, message):
 		for c in self.clients:
-			if c != new_client:
+			if c != source_client:
 				c.send(message)
 
 def init(conf, shm):

@@ -1,38 +1,25 @@
-import re
+import os, sys, logging, re
+import tty, termios
 import array
 import socket
-import termios
-import logging
 import settings
 
-import os, tty, termios, sys
-from contextlib import contextmanager
-
-"""
-@contextmanager
-def cbreak(fdinput): 
-  if hasattr(fdinput, "fileno") and os.isatty(fdinput.fileno()):
-    old_attrs = termios.tcgetattr(fdinput)
-    tty.setcbreak(fdinput)
-    tty.setraw(fdinput)
-  try:
-    yield
-  finally:
-    if hasattr(fdinput, "fileno") and os.isatty(fdinput.fileno()):
-      termios.tcsetattr(fdinput, termios.TCSADRAIN, old_attrs)
-"""
-
-#enable/disable echo on tty
+# enable/disable echo on tty
 def enable_echo(fd, enabled):
 	(iflag, oflag, cflag, lflag, ispeed, ospeed, cc) = termios.tcgetattr(fd)
 	if enabled:
 		lflag |= termios.ECHO
-		tty.setcbreak(fd)
-		tty.setraw(fd)
 	else:
 		lflag &= ~termios.ECHO
 	new_attr = [iflag, oflag, cflag, lflag, ispeed, ospeed, cc]
 	termios.tcsetattr(fd, termios.TCSANOW, new_attr)
+
+def out(status, message, data = None):
+	output = [ str(status), str(message) ]
+	if not data is None:
+		data = serialize(data)
+		output.append(data.tostring())
+	os.write(sys.stdout.fileno(), ";".join(output))
 
 #Command methods
 def clean_command(command):
@@ -46,7 +33,7 @@ def is_valid_command(command):
 	return False, False
 
 #Serialization methods
-#serialize passed dict/list, atm it works only for one level object not nested ones
+# serialize passed dict/list, atm it works only for one level object not nested ones
 def serialize(data):
 	s = array.array("B")
 	entries = []
@@ -61,7 +48,7 @@ def serialize(data):
 	s.fromstring(settings.entry_separator.join(entries))
 	return s
 
-#unserialize passed dict/list, atm it works only for one level object not nested ones
+# unserialize passed dict/list, atm it works only for one level object not nested ones
 def unserialize(source, from_array = True):
 	#create a clone of original array or a new one from a string
 	if from_array:
@@ -115,6 +102,7 @@ def unserialize(source, from_array = True):
 		result.append(escape(entry, False))
 	return result
 
+# escape/unescape string for serialization procedure
 def escape(s, encode = True):
 	if encode:
 		return s.encode('unicode-escape')

@@ -69,17 +69,15 @@ class BridgeConnector(object):
 			if self.implements[action] == 'with_queue':
 				data = unserialize(params[required_params - 1], False)
 				self.queue_push(json.dumps(data))
-				print "1;done"
+				out(1, "done")
 			elif self.implements[action] == 'with_message':
 				if self.has_message():
-					pos, msg = self.get_message()
-					msg = json.loads(msg)
-					os.write(sys.stdout.fileno(), "1;"+str(pos)+";")
-					output = serialize(msg)
-					os.write(sys.stdout.fileno(), output.tostring())
+					pos, data = self.get_message()
+					data = json.loads(data)
+					out(1, pos, data)
 				else:
-					print "0;no_message"
+					out(0, "no_message")
 			else:
-				self.logger.debug("underground")
+				self.logger.debug("unknown behaviour action: %s" % action)
 		else:
 			self.logger.debug("asdasdasd")
