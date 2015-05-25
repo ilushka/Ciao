@@ -1,6 +1,6 @@
 import os, sys, logging
 import socket, asyncore
-import json
+import json, hashlib
 
 class BridgeHandler(asyncore.dispatcher_with_send):
 	def __init__(self, sock, name, shm):
@@ -15,32 +15,36 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 	#this function must return true only if we have something
 	# to write - through socket - to the bridge connector
 	def writable(self):
-		entry = self.shm[self.name].queue_pull()
-		if entry:
-			self.data = entry
+		checksum, entry = self.shm[self.name].stash_get("out")
+		if checksum:
+			self.checksum = checksum
+			self.entry = entry
 			return True
 
 	def handle_read(self):
 		msg = self.recv(1024)
 		msg = msg.rstrip()
+		checksum = hashlib.md5(msg.encode('utf-8')).hexdigest()
 		if msg == "":
 			return
 		try:
-			json.loads(msg)
+			#TODO this must check if - inside hash - there is the key "data"
+			entry = json.loads(msg)
 		except ValueError, e:
 			self.logger.debug("String not empty but not JSON: %s" % msg)
 		else:
-			position = self.shm[self.name].put_message(msg)
+			self.shm[self.name].stash_put("in", checksum, entry)
 			#we have to return output only if client doesn't specify otherwise
-			data = {
-				"status" : 200,
-				"queue_id": position
+			result = {
+				"status" : 1,
+				"checksum": checksum
 			}
-			self.send(json.dumps(data))
+			self.send(json.dumps(result))
 
 	def handle_write(self):
-		self.send(self.data)
-		self.data = ""
+		self.send(json.loads(self.entry))
+		self.entry = ""
+		self.checksum = ""
 
 	def handle_close(self):
 		self.logger.debug('BridgeHandler(%s) - ended' % self.name)

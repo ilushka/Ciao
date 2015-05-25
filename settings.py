@@ -16,9 +16,9 @@ conf = {
 	"connectors" : {
 		"xmpp" : {
 			"implements" : {
-				"read" : "with_message",
-				"write" : "with_queue",
-				"writeresponse" : "with_queue"
+				"read" : "in",
+				"write" : "out",
+				"writeresponse" : "out"
 			}
 		}
 	}

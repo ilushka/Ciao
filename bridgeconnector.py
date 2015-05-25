@@ -1,9 +1,7 @@
-import logging
+import os, sys, logging
+import json, hashlib
+
 import settings
-import json
-import sys
-import os
-from Queue import Queue
 from utils import *
 
 class BridgeConnector(object):
@@ -14,10 +12,13 @@ class BridgeConnector(object):
 		self.logger = logging.getLogger("server")
 		self.init_conf(conf)
 
-		#requests stash
+		#interactions stash
 		self.stash = []
-		#list of request to be read
-		self.fifo = []
+		#list of request handled like a fifo queue
+		# in - FROM OUTSIDE WORLD (connectors)
+		# out - FROM INSIDE WORLD (MCU)
+		# result - List for requests waiting for result
+		self.fifo = { "in": [], "out": [], "result":[] }
 
 	def init_conf(self, conf):
 		if "implements" in conf:
@@ -33,50 +34,66 @@ class BridgeConnector(object):
 	def unregister(self):
 		self.registered = False
 
-	def queue_push(self, entry):
-		self.queue.put(entry)
+	def stash_get(self, destination):
+		if len(self.fifo[destination]) > 0:
+			checksum = self.fifo[destination].pop(0)
+			return checksum, self.stash[checksum]
+		return False, False
 
-	def queue_pull(self):
-		if not self.queue.empty():
-			return self.queue.get_nowait()
+	def stash_put(self, destination, checksum, element):
+		self.stash[checksum] = element
+		self.fifo[destination].append(checksum)
 		return
 
-	def has_message(self):
-		return len(self.fifo) > 0
+	def has_result(self, checksum):
+		return checksum in self.stash and "result" in self.stash[checksum]
 
-	def get_message(self):
-		if len(self.fifo) > 0:
-			position = self.fifo.pop(0)
-			return position, self.stash[position]
-		return False
-
-	def put_message(self, message):
-		self.stash.append(message)
-		position = len(self.stash) - 1
-		self.fifo.append(position)
-		return position
+	def get_result(self, checksum):
+		return self.stash[checksum]["result"]
 
 	def run(self, short_action, command):
-		#retrieve real action value from short one (i.e. "r" => "read" )
+		#retrieve real action value from short one (e.g. "r" => "read" )
 		action = settings.allowed_actions[short_action]['map']
 		required_params = settings.allowed_actions[short_action]['params']
 		if self.is_registered() and action in self.implements:
-			"""
-			TODO
-			check if params length is equal to required_params (at least)
-			"""
 			params = command.split(";", required_params)
-			if self.implements[action] == 'with_queue':
-				data = unserialize(params[required_params - 1], False)
-				self.queue_push(json.dumps(data))
-				out(1, "done")
-			elif self.implements[action] == 'with_message':
-				if self.has_message():
-					pos, data = self.get_message()
-					data = json.loads(data)
-					out(1, pos, data)
+			if self.implements[action] == 'in':
+				pos, entry = self.stash_get("in")
+				if pos:
+					out(1, pos, entry["data"])
 				else:
 					out(0, "no_message")
+			elif self.implements[action] == 'out':
+				message = params[required_params - 1]
+				checksum = hashlib.md5(message.encode('utf-8')).hexdigest()
+				data = unserialize(message, False)
+				if action == "writeresponse":
+					result = {
+						"type": "response",
+						#checksum of read interaction we are responding to
+						"source_checksum": params[2],
+						"data": data
+					}
+				else:
+					result = {
+						"type": "out",
+						"data": data
+					}
+				self.stash_put("out", checksum, result)
+				out(1, "done")
+			elif self.implements[action] == 'result':
+				message = params[required_params - 1]
+				checksum = hashlib.md5(message.encode('utf-8')).hexdigest()
+				if not checksum in self.stash:
+					result = { 
+						"type": "result",
+						"data": unserialize(message, False)
+					}
+					self.stash_put("out", checksum, result)
+				elif self.has_result(checksum):
+					out(1, checksum, self.get_result(checksum))
+				else:
+					out(0, "no_result")
 			else:
 				self.logger.debug("unknown behaviour action: %s" % action)
 		else:
