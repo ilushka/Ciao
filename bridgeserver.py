@@ -24,7 +24,9 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 	def handle_read(self):
 		msg = self.recv(1024)
 		msg = msg.rstrip()
+		self.logger.debug("msg %s" % msg)
 		checksum = hashlib.md5(msg.encode('utf-8')).hexdigest()
+		self.logger.debug("checksum %s" % checksum)
 		if msg == "":
 			return
 		try:
@@ -50,13 +52,38 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 		self.logger.debug('BridgeHandler(%s) - ended' % self.name)
 		#notify to server that this connector has disconnected
 		self.shm[self.name].unregister()
+	def handle_error(self):
+		nil, t, v, tbinfo = asyncore.compact_traceback()
 
+		# sometimes a user repr method will crash.
+		try:
+			self_repr = repr(self)
+		except:
+			self_repr = '<__repr__(self) failed for object at %0x>' % id(self)
+
+		self.logger.debug('BridgeHandler(%s) - uncaptured python exception %s (%s:%s %s)' % (
+			self.name, self_repr, t, v, tbinfo
+		))
+		self.logger.debug('BridgeHandler(%s) - closing channel' % self.name)
+		self.close()
+		#self.close should trigger handle close but it seems it doesn't (than we call it manually)
+		self.handle_close()
+"""
 	def handle_error(self, type = None, value = None, traceback = None):
 		self.logger.debug('BridgeHandler(%s) - error' % self.name)
 		#self.logger.debug('bridgehandler - ended(due to error) %s %s %s ' % type, value, traceback)
 		self.close()
 		#notify to server that this connector has disconnected
 		self.shm[self.name].unregister()
+uncaptured python exception, closing channel %s (%s:%s %s)' % (
+                self_repr,
+                t,
+                v,
+                tbinfo
+                ),
+            'error'
+"""
+
 
 class BridgeServer(asyncore.dispatcher):
 	def __init__(self, name, conf, shm):

@@ -13,7 +13,7 @@ class BridgeConnector(object):
 		self.init_conf(conf)
 
 		#interactions stash
-		self.stash = []
+		self.stash = {}
 		#list of request handled like a fifo queue
 		# in - FROM OUTSIDE WORLD (connectors)
 		# out - FROM INSIDE WORLD (MCU)
