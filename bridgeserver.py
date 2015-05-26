@@ -1,6 +1,8 @@
 import os, sys, logging
 import socket, asyncore
-import json, hashlib
+import json
+
+from utils import *
 
 class BridgeHandler(asyncore.dispatcher_with_send):
 	def __init__(self, sock, name, shm):
@@ -9,6 +11,7 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 		self.name = name
 		self.shm = shm
 		self.shm[self.name].register()
+		self.checksum = ""
 		self.data = ""
 		self.logger.debug('BridgeHandler(%s) - started' % self.name)
 
@@ -18,22 +21,23 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 		checksum, entry = self.shm[self.name].stash_get("out")
 		if checksum:
 			self.checksum = checksum
-			self.entry = entry
+			self.data = entry
 			return True
 
 	def handle_read(self):
-		msg = self.recv(1024)
-		msg = msg.rstrip()
-		self.logger.debug("msg %s" % msg)
-		checksum = hashlib.md5(msg.encode('utf-8')).hexdigest()
-		self.logger.debug("checksum %s" % checksum)
-		if msg == "":
+		message = self.recv(1024)
+		message = message.rstrip()
+		self.logger.debug("handle_read (msg) - %s" % message)
+		#checksum = hashlib.md5(msg.encode('utf-8')).hexdigest()
+		checksum = get_checksum(message, False)
+		self.logger.debug("handle_read (checksum) - %s" % checksum)
+		if message == "":
 			return
 		try:
-			#TODO this must check if - inside hash - there is the key "data"
-			entry = json.loads(msg)
+			#TODO this must check if - inside hash - there is the key "data" (raiserror if not)
+			entry = json.loads(message)
 		except ValueError, e:
-			self.logger.debug("String not empty but not JSON: %s" % msg)
+			self.logger.debug("String not empty but not JSON: %s" % message)
 		else:
 			self.shm[self.name].stash_put("in", checksum, entry)
 			#we have to return output only if client doesn't specify otherwise
@@ -44,14 +48,15 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 			self.send(json.dumps(result))
 
 	def handle_write(self):
-		self.send(json.loads(self.entry))
-		self.entry = ""
+		self.send(json.dumps(self.data))
+		self.data = ""
 		self.checksum = ""
 
 	def handle_close(self):
 		self.logger.debug('BridgeHandler(%s) - ended' % self.name)
 		#notify to server that this connector has disconnected
 		self.shm[self.name].unregister()
+
 	def handle_error(self):
 		nil, t, v, tbinfo = asyncore.compact_traceback()
 
@@ -66,23 +71,8 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 		))
 		self.logger.debug('BridgeHandler(%s) - closing channel' % self.name)
 		self.close()
-		#self.close should trigger handle close but it seems it doesn't (than we call it manually)
+		#self.close should trigger handle_close but it seems it doesn't (than we call it manually)
 		self.handle_close()
-"""
-	def handle_error(self, type = None, value = None, traceback = None):
-		self.logger.debug('BridgeHandler(%s) - error' % self.name)
-		#self.logger.debug('bridgehandler - ended(due to error) %s %s %s ' % type, value, traceback)
-		self.close()
-		#notify to server that this connector has disconnected
-		self.shm[self.name].unregister()
-uncaptured python exception, closing channel %s (%s:%s %s)' % (
-                self_repr,
-                t,
-                v,
-                tbinfo
-                ),
-            'error'
-"""
 
 
 class BridgeServer(asyncore.dispatcher):

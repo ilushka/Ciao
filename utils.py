@@ -1,7 +1,8 @@
-import os, sys, logging, re
+import os, sys, time, logging
 import tty, termios
-import array
+import re, array
 import socket
+import hashlib
 import settings
 
 # enable/disable echo on tty
@@ -108,3 +109,8 @@ def escape(s, encode = True):
 		return s.encode('unicode-escape')
 	else:
 		return s.decode('unicode-escape')
+
+def get_checksum(msg, is_unique = True):
+	if not is_unique:
+		msg = str(time.time()) + msg
+	return hashlib.md5(msg.encode('unicode-escape')).hexdigest()

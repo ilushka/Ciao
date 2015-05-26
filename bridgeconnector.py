@@ -14,11 +14,11 @@ class BridgeConnector(object):
 
 		#interactions stash
 		self.stash = {}
-		#list of request handled like a fifo queue
-		# in - FROM OUTSIDE WORLD (connectors)
-		# out - FROM INSIDE WORLD (MCU)
-		# result - List for requests waiting for result
-		self.fifo = { "in": [], "out": [], "result":[] }
+
+		#list of requests handled with two fifo queues
+		# in - OUTSIDE-IN (connectors -> MCU)
+		# out - INSIDE-OUT (MCU -> connectors)
+		self.fifo = { "in": [], "out": [] }
 
 	def init_conf(self, conf):
 		if "implements" in conf:
@@ -35,11 +35,16 @@ class BridgeConnector(object):
 		self.registered = False
 
 	def stash_get(self, destination):
+		#TODO
+		# probably we should remove elements from stash (other than from fifo)
+		# if destination out and type response we should remove the original read too?
 		if len(self.fifo[destination]) > 0:
 			checksum = self.fifo[destination].pop(0)
 			return checksum, self.stash[checksum]
 		return False, False
 
+	# stash store hash elements
+	# type: out|result|response
 	def stash_put(self, destination, checksum, element):
 		self.stash[checksum] = element
 		self.fifo[destination].append(checksum)
@@ -57,6 +62,9 @@ class BridgeConnector(object):
 		required_params = settings.allowed_actions[short_action]['params']
 		if self.is_registered() and action in self.implements:
 			params = command.split(";", required_params)
+			#TODO
+			# required_params must be customizable according with connector
+			# after split we need to check if len(params) match expected required_params value
 			if self.implements[action] == 'in':
 				pos, entry = self.stash_get("in")
 				if pos:
@@ -65,7 +73,8 @@ class BridgeConnector(object):
 					out(0, "no_message")
 			elif self.implements[action] == 'out':
 				message = params[required_params - 1]
-				checksum = hashlib.md5(message.encode('utf-8')).hexdigest()
+				checksum = get_checksum(message, False)
+				#checksum = hashlib.md5(message.encode('utf-8')).hexdigest()
 				data = unserialize(message, False)
 				if action == "writeresponse":
 					result = {
@@ -83,7 +92,8 @@ class BridgeConnector(object):
 				out(1, "done")
 			elif self.implements[action] == 'result':
 				message = params[required_params - 1]
-				checksum = hashlib.md5(message.encode('utf-8')).hexdigest()
+				checksum = get_checksum(message)
+				#checksum = hashlib.md5(message.encode('utf-8')).hexdigest()
 				if not checksum in self.stash:
 					result = { 
 						"type": "result",
