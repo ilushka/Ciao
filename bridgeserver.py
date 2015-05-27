@@ -25,8 +25,11 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 			return True
 
 	def handle_read(self):
-		message = self.recv(1024)
+		message = self.recv(2048)
 		message = message.rstrip()
+		if message == "":
+			self.logger.debug("BridgeHandler(%s) received empty message (IGNORED)" % self.name)
+			return
 		self.logger.debug("handle_read (msg) - %s" % message)
 		#checksum = hashlib.md5(msg.encode('utf-8')).hexdigest()
 		checksum = get_checksum(message, False)
@@ -53,6 +56,7 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 		self.checksum = ""
 
 	def handle_close(self):
+		self.close()
 		self.logger.debug('BridgeHandler(%s) - ended' % self.name)
 		#notify to server that this connector has disconnected
 		self.shm[self.name].unregister()
@@ -99,7 +103,7 @@ class BridgeServer(asyncore.dispatcher):
 			#new client has to present itself (action:register)
 			hello = sock.recv(1024)
 			try:
-				data = json.loads(hello)		
+				data = json.loads(hello)
 				if not data['action'] or data['action'] != 'register' or not data['name']:
 					self.logger.debug('New client not presented properly %s' % hello)
 					sock.close()
@@ -107,6 +111,9 @@ class BridgeServer(asyncore.dispatcher):
 					self.logger.debug('Registering new connector with name %s' % data['name'])
 					if not data['name'] in self.shm:
 						self.logger.debug('No connectors enabled with name %s' % data['name'])
+						sock.close()
+					elif self.shm[data['name']].is_registered():
+						self.logger.debug('Connector %s already registered' % data['name'])
 						sock.close()
 					else:
 						handler = BridgeHandler(sock, data['name'], self.shm)

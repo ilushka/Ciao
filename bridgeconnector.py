@@ -5,9 +5,8 @@ import settings
 from utils import *
 
 class BridgeConnector(object):
-	def __init__(self, name, conf, queue, registered = False):
+	def __init__(self, name, conf, registered = False):
 		self.name = name
-		self.queue = queue
 		self.registered = registered
 		self.logger = logging.getLogger("server")
 		self.init_conf(conf)

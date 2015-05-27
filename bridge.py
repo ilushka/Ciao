@@ -3,7 +3,6 @@
 #ADD FEW LINES ABOUT PREFERRING inline communication OVER CRC
 
 import io, os, sys, logging
-from Queue import Queue
 from threading import Thread
 import atexit
 
@@ -16,20 +15,18 @@ from utils import *
 shd = {}
 
 #this connector could be used to interact with bridge (tty)
-shd['bridge'] = BridgeConnector("bridge", {}, Queue())
+shd['bridge'] = BridgeConnector("bridge", {})
 
 for connector, connector_conf in settings.conf['connectors'].items():
-	shd[connector] = BridgeConnector(connector, connector_conf, Queue())
+	shd[connector] = BridgeConnector(connector, connector_conf)
 
 #start bridgeserver (to interact with connectors)
 server = Thread(name="server", target=bridgeserver.init, args=(settings.conf,shd,))
 server.daemon = True
 server.start()
 
-"""
 #TODO
-we have to start another thread to control bridge status
-"""
+# would be great to start another thread to control bridge status
 logger = logging.getLogger("server")
 
 if settings.debug:

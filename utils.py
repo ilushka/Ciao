@@ -22,7 +22,7 @@ def out(status, message, data = None):
 		output.append(data.tostring())
 	os.write(sys.stdout.fileno(), ";".join(output))
 
-#Command methods
+#COMMAND METHODS
 def clean_command(command):
 	return command.rstrip()
 
@@ -33,7 +33,7 @@ def is_valid_command(command):
 		return elements[:2]
 	return False, False
 
-#Serialization methods
+#SERIALIZATION METHODS
 # serialize passed dict/list, atm it works only for one level object not nested ones
 def serialize(data):
 	s = array.array("B")
@@ -110,6 +110,7 @@ def escape(s, encode = True):
 	else:
 		return s.decode('unicode-escape')
 
+# calculate (unique)? checksum from a string
 def get_checksum(msg, is_unique = True):
 	if not is_unique:
 		msg = str(time.time()) + msg
