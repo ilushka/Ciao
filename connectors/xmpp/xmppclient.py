@@ -7,7 +7,7 @@
 import json
 import sleekxmpp
 
-class XMPP_Client(sleekxmpp.ClientXMPP):
+class XMPPClient(sleekxmpp.ClientXMPP):
 
     data_rx = [None]
 
@@ -27,6 +27,15 @@ class XMPP_Client(sleekxmpp.ClientXMPP):
         # stanza is received. Be aware that that includes
         # MUC messages and error messages.
         self.add_event_handler("message", self.message)
+
+        # Service Discovery
+        self.register_plugin('xep_0030')
+        # Data Forms
+        self.register_plugin('xep_0004')
+        # PubSub
+        self.register_plugin('xep_0060')
+        # XMPP Ping
+        self.register_plugin('xep_0199')
 
     def start(self, event):
         self.send_presence()

@@ -1,55 +1,39 @@
+#!/usr/bin/python
 ##    This file extends the YunBridge.
 ##
 ##    Copyright (C) 2015 Arduino Srl (http://www.arduino.org/)
 ##    Author : Fabrizio De Vita (fabriziodevita92@gmail.com)
 
 import os, sys, signal
-import asyncore, json
-from threading import Thread, Event
+import json, logging
 from Queue import Queue
-import logging
+import time
 
-import async_socket
-from xmpp_client import XMPP_Client
+from bridgetools import BridgeThread
+from xmppclient import XMPPClient
 
 def signal_handler(signum, frame):
-    file=open("log.txt","a")
-    file.write("SIGNAL CATCHED\n")
-    file.close()
-    global loop
-    loop = False
+    logger = logging.getLogger("server")
+    logger.debug("SIGNAL CATCHED")
+    global shd
+    shd["loop"] = False
 
-def child_main(shd, xmpp_queue, socket_queue):
-    socket = async_socket.BridgeSocket(shd, xmpp_queue, socket_queue)
-    socket.handle_connect("127.0.0.1", 8900)
-    params = {
-        "action" : "register",
-        "name" : "xmpp"
-    }
-    socket.send(json.dumps(params))
-    asyncore.loop(0.1)
-
-#shared
+#shared dictionary
 shd = {}
-
-#read configuration
-json_conf = open("xmpp.json.conf").read()
-shd["conf"] = json.loads(json_conf)
+shd["loop"] = True
+shd["basepath"] = os.path.dirname(os.path.abspath(__file__)) + os.sep
 
 #init log
-logging.basicConfig(filename="xmpp.log", level=logging.DEBUG)
+logging.basicConfig(filename=shd["basepath"]+"xmpp.log", level=logging.DEBUG)
 logger = logging.getLogger("xmpp")
 
-params = shd["conf"]["params"]
+#read configuration
+#TODO
+# verify configuration is a valid JSON
+json_conf = open(shd["basepath"]+"xmpp.json.conf").read()
+shd["conf"] = json.loads(json_conf)
 
-xmpp_user = params["username"]
-xmpp_password = params["password"]
-
-if "domain" in params:
-    xmpp_user += "@" + params["domain"]
-else:
-    xmpp_user += "@" + params["host"]
-
+#forking to make process standalone
 try:
     pid = os.fork()
     print pid
@@ -60,21 +44,21 @@ except OSError, e:
     self.logger("Fork failed")
     sys.exit(1)
 
-loop=True
+params = shd["conf"]["params"]
+
+#setting up user/password (for xmpp)
+xmpp_user = params["username"]
+xmpp_password = params["password"]
+
+if "domain" in params:
+    xmpp_user += "@" + params["domain"]
+else:
+    xmpp_user += "@" + params["host"]
 
 xmpp_queue = Queue()
 socket_queue = Queue()
 
-xmpp = XMPP_Client(xmpp_user, xmpp_password, socket_queue)
-
-# Service Discovery
-xmpp.register_plugin('xep_0030')
-# Data Forms
-xmpp.register_plugin('xep_0004')
-# PubSub
-xmpp.register_plugin('xep_0060')
-# XMPP Ping
-xmpp.register_plugin('xep_0199')
+xmpp = XMPPClient(xmpp_user, xmpp_password, socket_queue)
 
 signal.signal(signal.SIGHUP, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
@@ -85,11 +69,10 @@ if xmpp.connect((params["host"], params["port"]), use_tls = params["tls"], use_s
     
     shd["requests"] = {}
 
-    child = Thread(target = child_main, args=(shd, xmpp_queue, socket_queue))
-    child.daemon = True
-    child.start()
+    bridgeclient = BridgeThread(shd, xmpp_queue, socket_queue)
+    bridgeclient.start()
 
-    while loop :
+    while shd["loop"] :
         if not xmpp_queue.empty():
             logger.debug("something to read in xmpp_queue")
             entry = xmpp_queue.get()
@@ -109,8 +92,11 @@ if xmpp.connect((params["host"], params["port"]), use_tls = params["tls"], use_s
                 continue
             
             xmpp.send_message(mto=to, mbody=message, mtype='chat')
+        # sleep prevent python to take full CPU cause to while True
+        time.sleep(0.01)
 
-    child.exit()
+    xmpp.disconnect(wait=True)
+    logger.debug("XMPP connector is closing")
     sys.exit(0)
 
 else:
