@@ -5,6 +5,7 @@
 import io, os, sys, logging
 from threading import Thread
 import atexit
+import time
 
 import settings
 from bridgeconnector import BridgeConnector
@@ -54,3 +55,6 @@ while True:
 			logger.debug("unknown connector: %s" % cmd)
 		else:
 			shd[connector].run(action, cmd)
+	# the sleep is really useful to prevent bridge to cap all CPU
+	# this could be increased/decreased (keep an eye on CPU usage)
+	time.sleep(0.01)
