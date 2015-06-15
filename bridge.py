@@ -25,32 +25,12 @@ logging.basicConfig(filename=settings.conf['logfile'], level=logging.DEBUG)
 logger = logging.getLogger("bridge")
 
 #loading configuration for connectors
-try:
-	conf_list = os.listdir(settings.conf['paths']['conf'])
-except Exception, e:
-	logger.debug("Problem opening conf folder: %s" % e)
-	exit(1)
-else:
-	settings.conf['connectors'] = {}
-	for conf_file in conf_list:
-		if conf_file.endswith(".json.conf"):
-			try:
-				conf_json = open(settings.conf['paths']['conf'] + conf_file).read()
-				conf_plain = json.loads(conf_json)
-				if 'name' in conf_plain:
-					connector_name = conf_plain['name']
-				else:
-					logger.debug("Missing connector name in configuration file(%s)" % conf_file)
-					connector_name = conf_file[:-len(".json.conf")]		
-				if "enabled" in conf_plain and conf_plain['enabled']:
-					settings.conf['connectors'][connector_name] = conf_plain
-					logger.debug("Loaded configuration for %s connector" % connector_name)
-				else:
-					logger.debug("Ignoring %s configuration: connector not enabled" % connector_name)
-			except Exception, e:
-				logger.debug("Problem loading configuration file (%s): %s" % (conf_file, e))
+settings.load_connectors(logger)
 
-settings.conf['backlog'] = len(settings.conf['connectors'])
+#check if connectors have been actually loaded
+if not "connectors" in settings.conf or len(settings.conf["connectors"]) == 0:
+	logger.debug("No connector enabled, exiting.")
+	sys.exit(1)
 
 #creating shared dictionary
 shd = {}
@@ -80,14 +60,13 @@ else:
 	atexit.register(enable_echo, sys.stdin.fileno(), True)
 	handle = io.open(sys.stdin.fileno(), "rb")
 
+#while control variable
 keepcycle = True
-#ctrl+c
-signal.signal(signal.SIGINT, signal_handler) 
-#SIGHUP - 1
-signal.signal(signal.SIGHUP, signal_handler) 
-#SIGTERM - 15
-signal.signal(signal.SIGTERM, signal_handler)
 
+#adding signals management
+signal.signal(signal.SIGINT, signal_handler) #ctrl+c
+signal.signal(signal.SIGHUP, signal_handler) #SIGHUP - 1
+signal.signal(signal.SIGTERM, signal_handler) #SIGTERM - 15
 
 while keepcycle:
 	try:
@@ -109,6 +88,7 @@ while keepcycle:
 		# this could be increased/decreased (keep an eye on CPU usage)
 		time.sleep(0.01)
 
+#stopping connectors (managed)
 for name, connector in shd.items():
 	logger.debug("Sending stop signal to %s" % name)
 	connector.stop()
