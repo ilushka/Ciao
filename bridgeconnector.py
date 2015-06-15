@@ -1,5 +1,6 @@
 import os, sys, logging
 import json, hashlib
+from subprocess import check_call
 
 import settings
 from utils import *
@@ -8,20 +9,43 @@ class BridgeConnector(object):
 	def __init__(self, name, conf, registered = False):
 		self.name = name
 		self.registered = registered
-		self.logger = logging.getLogger("server")
+		self.logger = logging.getLogger("bridge.connector." + self.name)
 		self.init_conf(conf)
 
 		#interactions stash
 		self.stash = {}
 
-		#list of requests handled with two fifo queues
+		#list of requests handled with two FIFO queues
 		# in - OUTSIDE-IN (connectors -> MCU)
 		# out - INSIDE-OUT (MCU -> connectors)
 		self.fifo = { "in": [], "out": [] }
 
 	def init_conf(self, conf):
+		#TODO
+		# we must provide conf validation (to prevent typos or missing params)
+		#type can be managed/standalone
+		self.type = conf['type']
+		if self.type == "managed":
+			self.managed_start = conf['commands']['start']
+			self.managed_stop = conf['commands']['stop']
+
+			#if type is managed we have to start/stop connector "manually"
+			##out = check_output(self.managed_start) requires python >= 2.7
+			##self.debug("Start output: %s" % out)
+			check_call(self.managed_start)
+
 		if "implements" in conf:
 			self.implements = conf['implements']
+
+	def stop(self):
+		self.logger.debug("Received stop commands")
+		if self.type == "managed":
+			##out = check_output(self.managed_stop) requires python >= 2.7
+			##self.debug("Stop output: %s" % out)
+			try:
+				check_call(self.managed_stop)
+			except Exception, e:
+				self.logger.debug("Exception during %s stop: %s" % (self.name, e))
 
 	def is_registered(self):
 		return self.registered

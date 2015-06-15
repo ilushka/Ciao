@@ -7,13 +7,13 @@ from utils import *
 class BridgeHandler(asyncore.dispatcher_with_send):
 	def __init__(self, sock, name, shm):
 		asyncore.dispatcher_with_send.__init__(self, sock)
-		self.logger = logging.getLogger("server")
 		self.name = name
 		self.shm = shm
 		self.shm[self.name].register()
 		self.checksum = ""
 		self.data = ""
-		self.logger.debug('BridgeHandler(%s) - started' % self.name)
+		self.logger = logging.getLogger("bridge.handler." + self.name)
+		self.logger.debug('Started')
 
 	#this function must return true only if we have something
 	# to write - through socket - to the bridge connector
@@ -28,7 +28,7 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 		message = self.recv(2048)
 		message = message.rstrip()
 		if message == "":
-			self.logger.debug("BridgeHandler(%s) received empty message (IGNORED)" % self.name)
+			self.logger.debug("Received empty message (IGNORED)")
 			return
 		self.logger.debug("handle_read (msg) - %s" % message)
 		#checksum = hashlib.md5(msg.encode('utf-8')).hexdigest()
@@ -57,7 +57,7 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 
 	def handle_close(self):
 		self.close()
-		self.logger.debug('BridgeHandler(%s) - ended' % self.name)
+		self.logger.debug('Closed')
 		#notify to server that this connector has disconnected
 		self.shm[self.name].unregister()
 
@@ -70,29 +70,26 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 		except:
 			self_repr = '<__repr__(self) failed for object at %0x>' % id(self)
 
-		self.logger.debug('BridgeHandler(%s) - uncaptured python exception %s (%s:%s %s)' % (
-			self.name, self_repr, t, v, tbinfo
-		))
-		self.logger.debug('BridgeHandler(%s) - closing channel' % self.name)
+		self.logger.debug('Uncaptured python exception %s (%s:%s %s)' % (self_repr, t, v, tbinfo))
+		self.logger.debug('Closing channel' % self.name)
 		self.close()
 		#self.close should trigger handle_close but it seems it doesn't (than we call it manually)
 		self.handle_close()
 
 
 class BridgeServer(asyncore.dispatcher):
-	def __init__(self, name, conf, shm):
+	def __init__(self, conf, shm):
 		asyncore.dispatcher.__init__(self)
-		self.srv_name = name
 		self.clients = []
 		self.shm = shm
 
 		#creating server socket
 		self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.set_reuse_addr()
-		self.bind((conf['srvhost'], conf['srvport']))
+		self.bind((conf['server']['host'], conf['server']['port']))
 		self.listen(conf['backlog'])
 
-		self.logger = logging.getLogger("server")
+		self.logger = logging.getLogger("bridge.server")
 
 	def handle_accept(self):
 		pair = self.accept()
@@ -122,12 +119,12 @@ class BridgeServer(asyncore.dispatcher):
 				self.logger.debug('Exception: new client not presented properly %s' % hello)
 				sock.close()
 
+	#function for debug purpose
 	def broadcast_message(self, source_client, message):
 		for c in self.clients:
 			if c != source_client:
 				c.send(message)
 
 def init(conf, shm):
-	logging.basicConfig(filename=conf['logfile'],level=logging.DEBUG)
-	server = BridgeServer("server", conf, shm)
+	server = BridgeServer(conf, shm)
 	asyncore.loop(0.05)

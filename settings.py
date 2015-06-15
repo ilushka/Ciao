@@ -1,30 +1,29 @@
+import os
+
+#basepath to look for conf/connectors/whatelse
+basepath = os.path.dirname(os.path.abspath(__file__)) + os.sep
+
 #enable/disable debug
 # atm this params has to be set to True only
 # if you want to use a file as stdin instead of the real one
 debug = True
 
 #configuration dictionary
-"""
-#TODO here we have to:
- scan SOMEDIR_CONF for connector configuration (bridge-side)
-"""
 conf = {
 	"backlog" : 5, #this value must match number of enabled connectors (we could len(connectors))
-	"srvhost" : "localhost",
-	"srvport" : 8900,
-	"logfile" : "bridge.log",
-	"connectors" : {
-		"xmpp" : {
-			"implements" : {
-				"read" : "in",
-				"write" : "out",
-				"writeresponse" : "out"
-			}
-		}
-	}
+	"server": {
+		"host" : "localhost",
+		"port" : 8900
+	},
+	#path starting with slash will be handled like absolute ones
+	"paths": {
+		"conf" : "conf/",
+		"connectors" : "connectors/"
+	},
+	"logfile" : "bridge.log"
 }
 
-#comunication settings
+#TODO comunication settings
 #bridge_msgsize = 1024
 #connector_msgsize = 1024
 
@@ -43,3 +42,15 @@ allowed_actions = {
 entry_separator = chr(30)
 # ASCII code for UnitSeparator (non-printable char)
 keyvalue_separator = chr(31)
+
+#adjust some settings about paths
+if not conf['paths']['conf'].startswith(os.sep): #relative path
+	conf['paths']['conf'] = basepath + conf['paths']['conf']
+if not conf['paths']['conf'].endswith(os.sep):
+	conf['paths']['conf'] += os.sep
+
+def init():
+	global conf
+	if not conf['paths']['conf'].startswith(os.sep): #relative path
+		global basepath
+		conf['paths']['conf'] = basepath + conf['paths']['conf']

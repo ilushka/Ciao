@@ -46,17 +46,9 @@ class BridgeHandler(asyncore.dispatcher_with_send):
         self.send(json.dumps(entry))
 
     def handle_close(self):
+        self.close()
         self.logger.debug("Handle CLOSE")
         return
-        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-        while 1:
-            self.logger.debug("Trying to reconnect")
-            try:
-                self.handle_connect("127.0.0.1", 8900)
-                self.logger.debug(" - connected")
-            except:
-                self.logger.debug(" - error")
-                time.sleep(5)
 
     def handle_error(self):
         nil, t, v, tbinfo = asyncore.compact_traceback()
@@ -72,14 +64,6 @@ class BridgeHandler(asyncore.dispatcher_with_send):
         ))
         self.logger.debug("Handle ERROR")
         return
-        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-        while 1:
-            self.logger.debug("Trying to reconnect")
-            try:
-                self.handle_connect("127.0.0.1", 5555)
-                self.logger.debug(" - connected")
-            except:
-                self.logger.debug(" - error")
 
 class BridgeSocket(asyncore.dispatcher):
     host = None
@@ -117,7 +101,7 @@ class BridgeThread(Thread):
 
     def run(self):
         try:
-            asyncore.loop(0.1)
+            asyncore.loop(0.05)
         except asyncore.ExitNow, e:
             logger = logging.getLogger("xmpp")
             logger.debug("Exception asyncore.ExitNow, closing BridgeSocket. (%s)" % e)

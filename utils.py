@@ -4,6 +4,7 @@ import re, array
 import socket
 import hashlib
 import settings
+from bridgeconnector import BridgeConnector
 
 # enable/disable echo on tty
 def enable_echo(fd, enabled):
@@ -15,6 +16,7 @@ def enable_echo(fd, enabled):
 	new_attr = [iflag, oflag, cflag, lflag, ispeed, ospeed, cc]
 	termios.tcsetattr(fd, termios.TCSANOW, new_attr)
 
+# useful function to print out result (to MCU)
 def out(status, message, data = None):
 	output = [ str(status), str(message) ]
 	if not data is None:
@@ -22,7 +24,7 @@ def out(status, message, data = None):
 		output.append(data.tostring())
 	os.write(sys.stdout.fileno(), ";".join(output))
 
-#COMMAND METHODS
+#COMMAND FUNCTIONS
 def clean_command(command):
 	return command.rstrip()
 
@@ -33,7 +35,7 @@ def is_valid_command(command):
 		return elements[:2]
 	return False, False
 
-#SERIALIZATION METHODS
+#SERIALIZATION FUNCTIONS
 # serialize passed dict/list, atm it works only for one level object not nested ones
 def serialize(data):
 	s = array.array("B")
