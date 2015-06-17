@@ -4,7 +4,6 @@ import re, array
 import socket
 import hashlib
 import settings
-from bridgeconnector import BridgeConnector
 
 # enable/disable echo on tty
 def enable_echo(fd, enabled):

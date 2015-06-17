@@ -10,7 +10,6 @@ debug = True
 
 #configuration dictionary
 conf = {
-	"backlog" : 5, #this value must match number of enabled connectors (we could len(connectors))
 	"server": {
 		"host" : "localhost",
 		"port" : 8900
@@ -23,18 +22,14 @@ conf = {
 	"logfile" : "bridge.log"
 }
 
-#TODO comunication settings
-#bridge_msgsize = 1024
-#connector_msgsize = 1024
-
 #allowed action accepted from bridge(MCU-side)
 allowed_actions = {
-	#requires 3 params - connector;action;data(optional)
-	"r": { "params": 3, "map": "read"},
+	#requires 2/3 params - connector;action;data(optional)
+	"r": { "map": "read"},
 	#requires 3 params - connector;action;data
-	"w": { "params": 3, "map": "write"},
+	"w": { "map": "write"},
 	#requires 4 params - connector;action;reference;data
-	"wr": { "params": 4, "map": "writeresponse"}
+	"wr": { "map": "writeresponse"}
 }
 
 #serialization settings
@@ -48,6 +43,8 @@ if not conf['paths']['conf'].startswith(os.sep): #relative path
 	conf['paths']['conf'] = basepath + conf['paths']['conf']
 if not conf['paths']['conf'].endswith(os.sep):
 	conf['paths']['conf'] += os.sep
+if not conf['logfile'].startswith(os.sep): #relative path
+	conf['logfile'] = basepath + conf['logfile']
 
 def load_connectors(logger):
 	global conf

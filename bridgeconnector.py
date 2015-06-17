@@ -32,7 +32,10 @@ class BridgeConnector(object):
 			#if type is managed we have to start/stop connector "manually"
 			##out = check_output(self.managed_start) requires python >= 2.7
 			##self.debug("Start output: %s" % out)
-			check_call(self.managed_start)
+			try:
+				check_call(self.managed_start)
+			except Exception, e:
+				self.logger.debug("Exception during %s start: %s" % (self.name, e))
 
 		if "implements" in conf:
 			self.implements = conf['implements']
@@ -82,27 +85,38 @@ class BridgeConnector(object):
 	def run(self, short_action, command):
 		#retrieve real action value from short one (e.g. "r" => "read" )
 		action = settings.allowed_actions[short_action]['map']
-		required_params = settings.allowed_actions[short_action]['params']
-		if self.is_registered() and action in self.implements:
+
+		if not self.is_registered():
+			self.logger.debug("Connector %s not yet registered" % self.name)
+			out(0, "no_connector")
+		elif not action in self.implements:
+			self.logger.debug("Connector %s does not implement %s" % (self.name, action))
+			out(0, "no_action")
+		else:
+			required_params = self.implements[action]['params']
 			params = command.split(";", required_params)
 			#TODO
 			# required_params must be customizable according with connector
 			# after split we need to check if len(params) match expected required_params value
-			if self.implements[action] == 'in':
+
+			#if this action is from the "world" to MCU
+			if self.implements[action]['direction'] == 'in':
 				pos, entry = self.stash_get("in")
 				if pos:
 					out(1, pos, entry["data"])
 				else:
 					out(0, "no_message")
-			elif self.implements[action] == 'out':
+
+			#if this action is from MCU to the "world"
+			elif self.implements[action]['direction'] == 'out':
 				message = params[required_params - 1]
 				checksum = get_checksum(message, False)
-				#checksum = hashlib.md5(message.encode('utf-8')).hexdigest()
+
 				data = unserialize(message, False)
 				if action == "writeresponse":
 					result = {
 						"type": "response",
-						#checksum of read interaction we are responding to
+						#checksum of read interaction we are responding to (fixed position)
 						"source_checksum": params[2],
 						"data": data
 					}
@@ -113,10 +127,11 @@ class BridgeConnector(object):
 					}
 				self.stash_put("out", checksum, result)
 				out(1, "done")
-			elif self.implements[action] == 'result':
+
+			#if this action is a request from MCU aiming to get a result
+			elif self.implements[action]['direction'] == 'result':
 				message = params[required_params - 1]
 				checksum = get_checksum(message)
-				#checksum = hashlib.md5(message.encode('utf-8')).hexdigest()
 				if not checksum in self.stash:
 					result = { 
 						"type": "result",
@@ -129,5 +144,4 @@ class BridgeConnector(object):
 					out(0, "no_result")
 			else:
 				self.logger.debug("unknown behaviour action: %s" % action)
-		else:
-			self.logger.debug("asdasdasd")
+				out(0, "no_match")

@@ -6,7 +6,7 @@
 import logging
 import socket, asyncore
 import json
-#import time
+
 from threading import Thread
 from Queue import Queue
 

@@ -51,7 +51,7 @@ if settings.debug:
 	print "Starting bridge in DEBUG MODE"
 	logger.debug("Starting bridge in DEBUG MODE")
 
-	handle = io.open("fake.stdin", "r+b")
+	handle = io.open(settings.basepath + "fake.stdin", "r+b")
 else:
 	#disable echo on terminal 
 	enable_echo(sys.stdin, False)
@@ -60,7 +60,7 @@ else:
 	atexit.register(enable_echo, sys.stdin.fileno(), True)
 	handle = io.open(sys.stdin.fileno(), "rb")
 
-#while control variable
+#variable for controlling while loop
 keepcycle = True
 
 #adding signals management
