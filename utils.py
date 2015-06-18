@@ -30,7 +30,7 @@ def clean_command(command):
 def is_valid_command(command):
 	#a valid command must contain at least two fields: connector and action
 	elements = command.split(";", 2)
-	if len(elements) >= 2 and elements[1] in settings.allowed_actions:
+	if len(elements) >= 2 and elements[1] in settings.actions_map:
 		return elements[:2]
 	return False, False
 

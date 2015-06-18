@@ -16,9 +16,9 @@ import bridgeserver
 #function to handle OS signals
 def signal_handler(signum, frame):
 	global logger
-	global keepcycle
+	global keepcycling
 	logger.debug("Received signal %d" % signum)
-	keepcycle = False
+	keepcycling = False
 
 #opening logfile
 logging.basicConfig(filename=settings.conf['logfile'], level=logging.DEBUG)
@@ -40,13 +40,14 @@ server = Thread(name="server", target=bridgeserver.init, args=(settings.conf,shd
 server.daemon = True
 server.start()
 
-#we start connectors after bridgeserver (so they can register themselves on init_conf)
+#we start connectors after bridgeserver (so they can register themselves)
 for connector, connector_conf in settings.conf['connectors'].items():
 	shd[connector] = BridgeConnector(connector, connector_conf)
 
 #TODO
 # would be great to start another thread to control bridge status
 
+#acquiring stream for receiving/sending command from MCU
 if settings.debug:
 	print "Starting bridge in DEBUG MODE"
 	logger.debug("Starting bridge in DEBUG MODE")
@@ -60,15 +61,15 @@ else:
 	atexit.register(enable_echo, sys.stdin.fileno(), True)
 	handle = io.open(sys.stdin.fileno(), "rb")
 
-#variable for controlling while loop
-keepcycle = True
-
 #adding signals management
 signal.signal(signal.SIGINT, signal_handler) #ctrl+c
 signal.signal(signal.SIGHUP, signal_handler) #SIGHUP - 1
 signal.signal(signal.SIGTERM, signal_handler) #SIGTERM - 15
 
-while keepcycle:
+#variable for controlling while loop
+keepcycling = True
+
+while keepcycling:
 	try:
 		#reading from input device
 		cmd = clean_command(handle.readline())

@@ -6,7 +6,7 @@ basepath = os.path.dirname(os.path.abspath(__file__)) + os.sep
 #enable/disable debug
 # atm this params has to be set to True only
 # if you want to use a file as stdin instead of the real one
-debug = True
+debug = False
 
 #configuration dictionary
 conf = {
@@ -22,14 +22,11 @@ conf = {
 	"logfile" : "bridge.log"
 }
 
-#allowed action accepted from bridge(MCU-side)
-allowed_actions = {
-	#requires 2/3 params - connector;action;data(optional)
-	"r": { "map": "read"},
-	#requires 3 params - connector;action;data
-	"w": { "map": "write"},
-	#requires 4 params - connector;action;reference;data
-	"wr": { "map": "writeresponse"}
+#map of actions accepted from bridge(MCU-side)
+actions_map = {
+	"r": "read", #requires 2/3 params - connector;action;data(optional)
+	"w": "write", #requires 3 params - connector;action;data
+	"wr": "writeresponse" #requires 4 params - connector;action;reference;data
 }
 
 #serialization settings
