@@ -21,7 +21,8 @@ def out(status, message, data = None):
 	if not data is None:
 		data = serialize(data)
 		output.append(data.tostring())
-	os.write(sys.stdout.fileno(), ";".join(output))
+	#4 (ASCII) means end trasmit (like newline but via a non-printable char)
+	os.write(sys.stdout.fileno(), ";".join(output)+ chr(4))
 
 #COMMAND FUNCTIONS
 def clean_command(command):

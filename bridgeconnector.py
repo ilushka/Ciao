@@ -10,7 +10,7 @@ class BridgeConnector(object):
 		self.name = name
 		self.registered = registered
 		self.logger = logging.getLogger("bridge.connector." + self.name)
-		self.init_conf(conf)
+		self.load_conf(conf)
 
 		#interactions stash
 		self.stash = {}
@@ -20,7 +20,7 @@ class BridgeConnector(object):
 		# out - INSIDE-OUT (MCU -> connectors)
 		self.fifo = { "in": [], "out": [] }
 
-	def init_conf(self, conf):
+	def load_conf(self, conf):
 		#TODO
 		# we must provide conf validation (to prevent typos or missing params)
 		# type can be:
@@ -31,6 +31,12 @@ class BridgeConnector(object):
 			self.managed_start = conf['commands']['start']
 			self.managed_stop = conf['commands']['stop']
 
+		if "implements" in conf:
+			self.implements = conf['implements']
+
+	def start(self):
+		self.logger.debug("Received start command")
+		if self.type == "managed":
 			#if type is managed we have to start/stop connector "manually"
 			##out = check_output(self.managed_start) requires python >= 2.7
 			##self.debug("Start output: %s" % out)
@@ -38,9 +44,6 @@ class BridgeConnector(object):
 				check_call(self.managed_start)
 			except Exception, e:
 				self.logger.debug("Exception during %s start: %s" % (self.name, e))
-
-		if "implements" in conf:
-			self.implements = conf['implements']
 
 	def stop(self):
 		self.logger.debug("Received stop commands")

@@ -10,103 +10,113 @@ import json
 from threading import Thread
 from Queue import Queue
 
-class BridgeHandler(asyncore.dispatcher_with_send):
+#class BridgeHandler(asyncore.dispatcher_with_send):
 
-    write_pending = False
-    data_pending = None
+class BridgeClient(asyncore.dispatcher_with_send):
 
-    def handle_read(self):
-        self.logger.debug("Handle READ")
-        data = self.recv(2048)
-        self.logger.debug("read message: %s" % data)
-        if data:
-            data_decoded = json.loads(data)
-            if "status" in data_decoded:
-                if self.write_pending:
-                    self.shd["requests"][data_decoded["checksum"]] = self.data_pending
-                    self.data_pending = None
-                    self.write_pending = False
-                else:
-                    self.logger.debug("result msg but not write_pending: %s" % data)
-            else:
-                self.xmpp_queue.put(data_decoded)
+	host = "127.0.0.1"
+	port = 8900
+	write_pending = False
+	data_pending = None
 
-    def writable(self):
-        if not self.shd["loop"]:
-            raise asyncore.ExitNow('Connector is quitting!')
-        if not self.socket_queue.empty() and not self.write_pending:
-            return True
-        return False
+	def __init__(self, shd, xmpp_queue, socket_queue):
+		asyncore.dispatcher_with_send.__init__(self)
+		self.shd = shd
+		self.xmpp_queue = xmpp_queue
+		self.socket_queue = socket_queue
 
-    def handle_write(self):
-        entry = self.socket_queue.get()
-        # we wait a feedback (status + checksum) from bridge)
-        self.write_pending = True
-        self.data_pending = entry
-        self.send(json.dumps(entry))
+		# load bridge (host, port) configuration if present
+		# otherwise it will use default
+		if "bridge" in self.shd['conf']:
+			if "host" in self.shd['conf']['bridge']:
+				self.host = self.shd['conf']['bridge']['host']
+			if "port" in self.shd['conf']['bridge']:
+				self.port = self.shd['conf']['bridge']['port']
+		self.logger = logging.getLogger("xmpp")
 
-    def handle_close(self):
-        self.close()
-        self.logger.debug("Handle CLOSE")
-        return
+	# register function (useful when connector start or reconnect)
+	def register(self):
+		self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+		self.connect((self.host, self.port))
+		params = {
+			"action" : "register",
+			"name" : "xmpp"
+		}
+		self.socket.send(json.dumps(params))
 
-    def handle_error(self):
-        nil, t, v, tbinfo = asyncore.compact_traceback()
+	def handle_read(self):
+		self.logger.debug("Handle READ")
+		data = self.recv(2048)
+		self.logger.debug("read message: %s" % data)
+		if data:
+			data_decoded = json.loads(data)
+			if "status" in data_decoded:
+				if self.write_pending:
+					self.shd["requests"][data_decoded["checksum"]] = self.data_pending
+					self.data_pending = None
+					self.write_pending = False
+				else:
+					self.logger.debug("result msg but not write_pending: %s" % data)
+			else:
+				self.xmpp_queue.put(data_decoded)
 
-        # sometimes a user repr method will crash.
-        try:
-            self_repr = repr(self)
-        except:
-            self_repr = '<__repr__(self) failed for object at %0x>' % id(self)
+	# writable/handle_write are function useful only 
+	# if the connector offers communication from OUTSIDE WORLD to MCU
+	def writable(self):
+		if not self.shd["loop"]:
+			raise asyncore.ExitNow('Connector is quitting!')
+		if not self.socket_queue.empty() and not self.write_pending:
+			return True
+		return False
 
-        self.logger.debug('BridgeSocket - uncaptured python exception %s (%s:%s %s)' % (
-            self_repr, t, v, tbinfo
-        ))
-        self.logger.debug("Handle ERROR")
-        return
+	def handle_write(self):
+		entry = self.socket_queue.get()
+		# we wait a feedback (status + checksum) from bridge)
+		self.write_pending = True
+		self.data_pending = entry
+		self.send(json.dumps(entry))
 
-class BridgeSocket(asyncore.dispatcher):
-    host = None
-    port = None
-    handler = None
-    def __init__(self, shd, xmpp_queue, socket_queue):
-        self.shd = shd
-        self.xmpp_queue = xmpp_queue
-        self.socket_queue = socket_queue
-        asyncore.dispatcher.__init__(self)
-        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.logger = logging.getLogger("xmpp")
+	# function to handle socket close
+	def handle_close(self):
+		self.close()
+		self.logger.debug("Handle CLOSE")
+		return
 
-    def handle_connect(self, host, port):
-        self.host = host
-        self.port = port
-        self.connect((host,port))
-        self.handler = BridgeHandler(self)
+	# function to handle error over socket (and close it if necessary)
+	def handle_error(self):
+		nil, t, v, tbinfo = asyncore.compact_traceback()
 
-    def exit(self):
-        raise asyncore.ExitNow('Connector is quitting!')
+		# sometimes a user repr method will crash.
+		try:
+			self_repr = repr(self)
+		except:
+			self_repr = '<__repr__(self) failed for object at %0x>' % id(self)
+
+		self.logger.debug('BridgeSocket - uncaptured python exception %s (%s:%s %s)' % (
+			self_repr, t, v, tbinfo
+		))
+		self.logger.debug("Handle ERROR")
+		return
+
+	def exit(self):
+		raise asyncore.ExitNow('Connector is quitting!')
 
 class BridgeThread(Thread):
-    def __init__(self, shd, xmpp_queue, socket_queue):
-        Thread.__init__(self)
-        self.daemon = True
-        self.shd = shd
-        self.socket = BridgeSocket(shd, xmpp_queue, socket_queue)
-        self.socket.handle_connect("127.0.0.1", 8900)
-        params = {
-            "action" : "register",
-            "name" : "xmpp"
-        }
-        self.socket.send(json.dumps(params))
+	def __init__(self, shd, xmpp_queue, socket_queue):
+		Thread.__init__(self)
+		self.daemon = True
+		self.shd = shd
+		self.client = BridgeClient(shd, xmpp_queue, socket_queue)
+		self.client.register()
 
-    def run(self):
-        try:
-            asyncore.loop(0.05)
-        except asyncore.ExitNow, e:
-            logger = logging.getLogger("xmpp")
-            logger.debug("Exception asyncore.ExitNow, closing BridgeSocket. (%s)" % e)
+	def run(self):
+		try:
+			asyncore.loop(0.05)
+		except asyncore.ExitNow, e:
+			logger = logging.getLogger("xmpp")
+			logger.debug("Exception asyncore.ExitNow, closing BridgeSocket. (%s)" % e)
 
-    def stop(self):
-        #self.socket.exit()
-        #self.socket.close()
-        self.join()
+	def stop(self):
+		#self.socket.exit()
+		#self.socket.close()
+		self.join()

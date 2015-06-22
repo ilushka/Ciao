@@ -3,10 +3,10 @@ import os, logging, json
 #basepath to look for conf/connectors/whatelse
 basepath = os.path.dirname(os.path.abspath(__file__)) + os.sep
 
-#enable/disable debug
+#enable/disable fake.stdin - TESTING PURPOSE
 # atm this params has to be set to True only
 # if you want to use a file as stdin instead of the real one
-debug = False
+use_fakestdin = False
 
 #configuration dictionary
 conf = {
@@ -24,9 +24,9 @@ conf = {
 
 #map of actions accepted from bridge(MCU-side)
 actions_map = {
-	"r": "read", #requires 2/3 params - connector;action;data(optional)
-	"w": "write", #requires 3 params - connector;action;data
-	"wr": "writeresponse" #requires 4 params - connector;action;reference;data
+	"r": "read", #usually requires 2/3 params - connector;action;data(optional)
+	"w": "write", #usuallyrequires 3 params - connector;action;data
+	"wr": "writeresponse" #usually requires 4 params - connector;action;reference;data
 }
 
 #serialization settings

@@ -21,7 +21,7 @@ def signal_handler(signum, frame):
 	keepcycling = False
 
 #opening logfile
-logging.basicConfig(filename=settings.conf['logfile'], level=logging.DEBUG)
+logging.basicConfig(filename=settings.conf['logfile'], level=logging.DEBUG, format='%(asctime)s %(message)s')
 logger = logging.getLogger("bridge")
 
 #loading configuration for connectors
@@ -43,12 +43,15 @@ server.start()
 #we start connectors after bridgeserver (so they can register themselves)
 for connector, connector_conf in settings.conf['connectors'].items():
 	shd[connector] = BridgeConnector(connector, connector_conf)
+	# we have to start the connector after it has been added to shd
+	# the connector registration is accepted only if it's listed in shd
+	shd[connector].start()
 
 #TODO
 # would be great to start another thread to control bridge status
 
 #acquiring stream for receiving/sending command from MCU
-if settings.debug:
+if settings.use_fakestdin:
 	print "Starting bridge in DEBUG MODE"
 	logger.debug("Starting bridge in DEBUG MODE")
 
@@ -75,6 +78,8 @@ while keepcycling:
 		cmd = clean_command(handle.readline())
 	except KeyboardInterrupt, e:
 		logger.debug("SIGINT received")
+	except IOError, e:
+		logger.debug("Interrupted system call")
 	else:
 		if cmd:
 			logger.debug("%s" % cmd)
