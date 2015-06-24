@@ -15,6 +15,9 @@ def enable_echo(fd, enabled):
 	new_attr = [iflag, oflag, cflag, lflag, ispeed, ospeed, cc]
 	termios.tcsetattr(fd, termios.TCSANOW, new_attr)
 
+def flush_terminal(fd):
+	termios.tcflush(fd, termios.TCIOFLUSH)
+
 # useful function to print out result (to MCU)
 def out(status, message, data = None):
 	output = [ str(status), str(message) ]

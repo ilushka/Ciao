@@ -37,13 +37,11 @@ class BridgeClient(asyncore.dispatcher_with_send):
 	# register function (useful when connector start or reconnect)
 	def register(self):
 		self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+		params = { "action" : "register", "name" : "xmpp" }
 		self.connect((self.host, self.port))
-		params = {
-			"action" : "register",
-			"name" : "xmpp"
-		}
 		self.socket.send(json.dumps(params))
 
+	# overriding native asyncore function to handle message received via socket
 	def handle_read(self):
 		self.logger.debug("Handle READ")
 		data = self.recv(2048)
@@ -56,11 +54,11 @@ class BridgeClient(asyncore.dispatcher_with_send):
 					self.data_pending = None
 					self.write_pending = False
 				else:
-					self.logger.debug("result msg but not write_pending: %s" % data)
+					self.logger.warning("result msg but not write_pending: %s" % data)
 			else:
 				self.xmpp_queue.put(data_decoded)
 
-	# writable/handle_write are function useful only 
+	# writable/handle_write are function useful ONLY 
 	# if the connector offers communication from OUTSIDE WORLD to MCU
 	def writable(self):
 		if not self.shd["loop"]:
@@ -71,7 +69,8 @@ class BridgeClient(asyncore.dispatcher_with_send):
 
 	def handle_write(self):
 		entry = self.socket_queue.get()
-		# we wait a feedback (status + checksum) from bridge)
+
+		# we wait a feedback (status + checksum) from bridge
 		self.write_pending = True
 		self.data_pending = entry
 		self.send(json.dumps(entry))
@@ -92,7 +91,7 @@ class BridgeClient(asyncore.dispatcher_with_send):
 		except:
 			self_repr = '<__repr__(self) failed for object at %0x>' % id(self)
 
-		self.logger.debug('BridgeSocket - uncaptured python exception %s (%s:%s %s)' % (
+		self.logger.error('BridgeSocket - uncaptured python exception %s (%s:%s %s)' % (
 			self_repr, t, v, tbinfo
 		))
 		self.logger.debug("Handle ERROR")
@@ -114,7 +113,7 @@ class BridgeThread(Thread):
 			asyncore.loop(0.05)
 		except asyncore.ExitNow, e:
 			logger = logging.getLogger("xmpp")
-			logger.debug("Exception asyncore.ExitNow, closing BridgeSocket. (%s)" % e)
+			logger.error("Exception asyncore.ExitNow, closing BridgeSocket. (%s)" % e)
 
 	def stop(self):
 		#self.socket.exit()

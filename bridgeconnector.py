@@ -35,7 +35,7 @@ class BridgeConnector(object):
 			self.implements = conf['implements']
 
 	def start(self):
-		self.logger.debug("Received start command")
+		self.logger.info("Received start command")
 		if self.type == "managed":
 			#if type is managed we have to start/stop connector "manually"
 			##out = check_output(self.managed_start) requires python >= 2.7
@@ -43,17 +43,17 @@ class BridgeConnector(object):
 			try:
 				check_call(self.managed_start)
 			except Exception, e:
-				self.logger.debug("Exception during %s start: %s" % (self.name, e))
+				self.logger.error("Exception during %s start: %s" % (self.name, e))
 
 	def stop(self):
-		self.logger.debug("Received stop commands")
+		self.logger.info("Received stop commands")
 		if self.type == "managed":
 			##out = check_output(self.managed_stop) requires python >= 2.7
 			##self.debug("Stop output: %s" % out)
 			try:
 				check_call(self.managed_stop)
 			except Exception, e:
-				self.logger.debug("Exception during %s stop: %s" % (self.name, e))
+				self.logger.error("Exception during %s stop: %s" % (self.name, e))
 
 	def is_registered(self):
 		return self.registered
@@ -94,10 +94,10 @@ class BridgeConnector(object):
 		action = settings.actions_map[short_action]
 
 		if not self.is_registered():
-			self.logger.debug("Connector %s not yet registered" % self.name)
+			self.logger.warning("Connector %s not yet registered" % self.name)
 			out(0, "no_connector")
 		elif not action in self.implements:
-			self.logger.debug("Connector %s does not implement %s" % (self.name, action))
+			self.logger.warning("Connector %s does not implement %s" % (self.name, action))
 			out(0, "no_action")
 		else:
 			required_params = self.implements[action]['params']
@@ -150,5 +150,5 @@ class BridgeConnector(object):
 				else:
 					out(0, "no_result")
 			else:
-				self.logger.debug("unknown behaviour action: %s" % action)
+				self.logger.warning("unknown behaviour action: %s" % action)
 				out(0, "no_match")

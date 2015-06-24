@@ -15,7 +15,7 @@ from xmppclient import XMPPClient
 # function to handle SIGHUP/SIGTERM
 def signal_handler(signum, frame):
 	global logger
-	logger.debug("SIGNAL CATCHED %d" % signum)
+	logger.info("SIGNAL CATCHED %d" % signum)
 	global shd
 	shd["loop"] = False
 
@@ -25,7 +25,7 @@ shd["loop"] = True
 shd["basepath"] = os.path.dirname(os.path.abspath(__file__)) + os.sep
 
 #init log
-logging.basicConfig(filename=shd["basepath"]+"xmpp.log", level=logging.DEBUG)
+logging.basicConfig(filename=shd["basepath"]+"xmpp.log", level=logging.INFO)
 logger = logging.getLogger("xmpp")
 
 #read configuration
@@ -45,7 +45,7 @@ try:
 		sys.exit(0)
 
 except OSError, e:
-	self.logger("Fork failed")
+	logger.critical("Fork failed")
 	sys.exit(1)
 
 xmpp_queue = Queue()
@@ -54,7 +54,7 @@ socket_queue = Queue()
 try:
 	xmpp = XMPPClient(shd["conf"]["params"], socket_queue)
 except Exception, e:
-	print e
+	logger.critical("Exception while creating XMPPClient: %s" % e)
 	sys.exit(1)
 
 signal.signal(signal.SIGINT, signal.SIG_IGN) #ignore SIGINT(ctrl+c)
@@ -62,7 +62,7 @@ signal.signal(signal.SIGHUP, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
 if xmpp.connect():
-	logger.debug("Connected to %s" % xmpp.host)
+	logger.info("Connected to %s" % xmpp.host)
 	
 	shd["requests"] = {}
 
@@ -71,34 +71,32 @@ if xmpp.connect():
 
 	# endless loop until SIGHUP/SIGTERM
 	while shd["loop"] :
-		# if we have something to write over XMPP
-		if not xmpp_queue.empty():
-			entry = xmpp_queue.get()
-			logger.debug("Entry %s" % entry)
+		# queue.get() function is synchronousentry
+		# it will return only when something is in xmpp_queue
+		entry = xmpp_queue.get()
+		logger.debug("Entry %s" % entry)
 
-			# if entry received from bridge is a "response"
-			if entry['type'] == "response":
-				original_checksum = entry["source_checksum"]
-				if not original_checksum in shd["requests"]:
-					logger.debug("Received response to unknown checksum %s" % original_checksum)
-					continue
-				original_message = shd["requests"][original_checksum]
-				to = str(original_message['data'][0])
-				message = str(entry['data'][0])
-			# if entry received from bridge is an "out" message
-			elif entry['type'] == "out":
-				to = str(entry['data'][0])
-				message = str(entry['data'][1])
-			else:
+		# if entry received from bridge is a "response"
+		if entry['type'] == "response":
+			original_checksum = entry["source_checksum"]
+			if not original_checksum in shd["requests"]:
+				logger.warning("Received response to unknown checksum %s" % original_checksum)
 				continue
-			
-			xmpp.send_message(mto=to, mbody=message, mtype='chat')
-		# sleep prevents python to take full CPU during while True
-		time.sleep(0.01)
+			original_message = shd["requests"][original_checksum]
+			to = str(original_message['data'][0])
+			message = str(entry['data'][0])
+		# if entry received from bridge is an "out" message
+		elif entry['type'] == "out":
+			to = str(entry['data'][0])
+			message = str(entry['data'][1])
+		else:
+			continue
+		
+		xmpp.send_message(mto=to, mbody=message, mtype='chat')
 
 	xmpp.disconnect(wait=True)
-	logger.debug("XMPP connector is closing")
+	logger.info("XMPP connector is closing")
 	sys.exit(0)
 
 else:
-	logger.debug("Unable to connect to %s" % params["host"])
+	logger.critical("Unable to connect to %s" % params["host"])

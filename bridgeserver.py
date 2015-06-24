@@ -28,10 +28,9 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 		message = self.recv(2048)
 		message = message.rstrip()
 		if message == "":
-			self.logger.debug("Received empty message (IGNORED)")
+			self.logger.warning("Received empty message (IGNORED)")
 			return
 		self.logger.debug("handle_read (msg) - %s" % message)
-		#checksum = hashlib.md5(msg.encode('utf-8')).hexdigest()
 		checksum = get_checksum(message, False)
 		self.logger.debug("handle_read (checksum) - %s" % checksum)
 		if message == "":
@@ -40,7 +39,7 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 			#TODO this must check if - inside hash - there is the key "data" (raiserror if not)
 			entry = json.loads(message)
 		except ValueError, e:
-			self.logger.debug("String not empty but not JSON: %s" % message)
+			self.logger.warning("String not empty but not JSON: %s" % message)
 		else:
 			self.shm[self.name].stash_put("in", checksum, entry)
 			#we have to return output only if client doesn't specify otherwise
@@ -70,8 +69,8 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 		except:
 			self_repr = '<__repr__(self) failed for object at %0x>' % id(self)
 
-		self.logger.debug('Uncaptured python exception %s (%s:%s %s)' % (self_repr, t, v, tbinfo))
-		self.logger.debug('Closing channel' % self.name)
+		self.logger.error('Uncaptured python exception %s (%s:%s %s)' % (self_repr, t, v, tbinfo))
+		self.logger.error('Closing channel' % self.name)
 		self.close()
 		#self.close should trigger handle_close but it seems it doesn't (than we call it manually)
 		self.handle_close()
@@ -95,28 +94,28 @@ class BridgeServer(asyncore.dispatcher):
 		pair = self.accept()
 		if pair is not None:
 			sock, addr = pair
-			self.logger.debug('Incoming connection from %s', repr(addr))
+			self.logger.info('Incoming connection from %s', repr(addr))
 
 			#new client has to present itself (action:register)
 			hello = sock.recv(1024)
 			try:
 				data = json.loads(hello)
 				if not data['action'] or data['action'] != 'register' or not data['name']:
-					self.logger.debug('New client not presented properly %s' % hello)
+					self.logger.warning('New client not presented properly %s' % hello)
 					sock.close()
 				else:
-					self.logger.debug('Registering new connector with name %s' % data['name'])
+					self.logger.info('Registering new connector with name %s' % data['name'])
 					if not data['name'] in self.shm:
-						self.logger.debug('No connectors enabled with name %s' % data['name'])
+						self.logger.warning('No connectors enabled with name %s' % data['name'])
 						sock.close()
 					elif self.shm[data['name']].is_registered():
-						self.logger.debug('Connector %s already registered' % data['name'])
+						self.logger.error('Connector %s already registered' % data['name'])
 						sock.close()
 					else:
 						handler = BridgeHandler(sock, data['name'], self.shm)
 						self.clients.append(handler)
 			except ValueError, e:
-				self.logger.debug('Exception: new client not presented properly %s' % hello)
+				self.logger.error('Exception: new client not presented properly %s' % hello)
 				sock.close()
 
 	#function for debug purpose

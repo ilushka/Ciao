@@ -19,7 +19,8 @@ conf = {
 		"conf" : "conf/",
 		"connectors" : "connectors/"
 	},
-	"logfile" : "bridge.log"
+	"logfile" : "bridge.log",
+	"logformat" : "%(asctime)s %(levelname)s %(name)s - %(message)s"
 }
 
 #map of actions accepted from bridge(MCU-side)
