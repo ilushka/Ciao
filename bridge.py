@@ -88,8 +88,20 @@ while keepcycling:
 			connector, action = is_valid_command(cmd)
 			if connector == False:
 				logger.warning("unknown command: %s" % cmd)
+				out(-1, "unknown_command")
+			elif connector == "bridge": #internal commands
+				params = cmd.split(";",2)
+				if len(params) != 3:
+					out(-1, "unknown_command")
+					continue
+				if action == "r" and params[2] == "status": #read status
+					out(1, "running")
+				elif action == "w" and params[2] == "quit": #stop bridge
+					out(1, "done")
+					keepcycling = False
 			elif not connector in settings.conf['connectors']:
 				logger.warning("unknown connector: %s" % cmd)
+				out(-1, "unknown_connector")
 			else:
 				shd[connector].run(action, cmd)
 
