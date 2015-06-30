@@ -14,13 +14,18 @@ conf = {
 		"host" : "localhost",
 		"port" : 8900
 	},
-	#path starting with slash will be handled like absolute ones
+	# path starting with slash will be handled like absolute ones
 	"paths": {
 		"conf" : "conf/",
 		"connectors" : "connectors/"
 	},
-	"logfile" : "bridge.log",
-	"logformat" : "%(asctime)s %(levelname)s %(name)s - %(message)s"
+	"log": {
+		"file" : "bridge.log",
+		"level" : "debug",
+		"format" : "%(asctime)s %(levelname)s %(name)s - %(message)s",
+		"maxSize" : 1 , # maxSize is expressed in MBytes
+		"maxRotate" : 5 # maxRotate expresses how much time logfile has to be rotated before deletion
+	}
 }
 
 #map of actions accepted from bridge(MCU-side)
@@ -36,13 +41,26 @@ entry_separator = chr(30)
 # ASCII code for UnitSeparator (non-printable char)
 keyvalue_separator = chr(31)
 
+#DO NOT CHANGE ANYTHING BELOW (UNLESS YOU ARE REALLY SURE)
+
 #adjust some settings about paths
 if not conf['paths']['conf'].startswith(os.sep): #relative path
 	conf['paths']['conf'] = basepath + conf['paths']['conf']
 if not conf['paths']['conf'].endswith(os.sep):
 	conf['paths']['conf'] += os.sep
-if not conf['logfile'].startswith(os.sep): #relative path
-	conf['logfile'] = basepath + conf['logfile']
+if not conf['log']['file'].startswith(os.sep): #relative path
+	conf['log']['file'] = basepath + conf['log']['file']
+
+#adjust settings about logging
+DLEVELS = {
+	'debug': logging.DEBUG,
+	'info': logging.INFO,
+	'warning': logging.WARNING,
+	'error': logging.ERROR,
+	'critical': logging.CRITICAL
+}
+conf['log']['level'] = DLEVELS.get(conf['log']['level'], logging.NOTSET)
+conf['log']['maxSize'] *= 1024*1024 #it's expressed in MBytes but we need bytes
 
 def load_connectors(logger):
 	global conf

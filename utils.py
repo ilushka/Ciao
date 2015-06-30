@@ -3,6 +3,9 @@ import tty, termios
 import re, array
 import socket
 import hashlib
+import logging
+from logging.handlers import RotatingFileHandler
+
 import settings
 
 # enable/disable echo on tty
@@ -15,8 +18,35 @@ def enable_echo(fd, enabled):
 	new_attr = [iflag, oflag, cflag, lflag, ispeed, ospeed, cc]
 	termios.tcsetattr(fd, termios.TCSANOW, new_attr)
 
+# flush stdin before starting service
+# it prevents answering to requests sent before bridge's up
 def flush_terminal(fd):
 	termios.tcflush(fd, termios.TCIOFLUSH)
+
+# setup logger
+def get_logger():
+	
+	# setup logging base configuration
+#	logging.basicConfig(
+#		filename = settings.conf['log']['file'],
+#		level=settings.conf['log']['level'],
+#		format=settings.conf['log']['format']
+#	)
+	logger = logging.getLogger("bridge")
+	logger.setLevel(settings.conf['log']['level'])
+
+	# create handler for maxsize e logrotation
+	handler = RotatingFileHandler(
+		settings.conf['log']['file'],
+		maxBytes=settings.conf['log']['maxSize'],
+		backupCount=settings.conf['log']['maxRotate']
+	)
+	#logging.basicConfig(format=settings.conf['log']['format'])
+	formatter = logging.Formatter(settings.conf['log']['format'])
+	handler.setFormatter(formatter)
+	logger.addHandler(handler)
+	return logger
+
 
 # useful function to print out result (to MCU)
 def out(status, message, data = None):
