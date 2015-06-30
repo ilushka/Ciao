@@ -21,9 +21,7 @@ def signal_handler(signum, frame):
 	keepcycling = False
 
 #opening logfile
-#logging.basicConfig(filename=settings.conf['logfile'], level=logging.DEBUG, format=settings.conf['logformat'])
-#logger = logging.getLogger("bridge")
-logger = get_logger()
+logger = get_logger("bridge")
 
 #loading configuration for connectors
 settings.load_connectors(logger)

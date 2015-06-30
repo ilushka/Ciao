@@ -25,7 +25,7 @@ shd["loop"] = True
 shd["basepath"] = os.path.dirname(os.path.abspath(__file__)) + os.sep
 
 #init log
-logging.basicConfig(filename=shd["basepath"]+"xmpp.log", level=logging.INFO)
+logging.basicConfig(filename=shd["basepath"]+"xmpp.log", level=logging.DEBUG)
 logger = logging.getLogger("xmpp")
 
 #read configuration
@@ -71,28 +71,32 @@ if xmpp.connect():
 
 	# endless loop until SIGHUP/SIGTERM
 	while shd["loop"] :
-		# queue.get() function is synchronousentry
-		# it will return only when something is in xmpp_queue
-		entry = xmpp_queue.get()
-		logger.debug("Entry %s" % entry)
+		if not xmpp_queue.empty():
+			entry = xmpp_queue.get()
+			logger.debug("Entry %s" % entry)
 
-		# if entry received from bridge is a "response"
-		if entry['type'] == "response":
-			original_checksum = entry["source_checksum"]
-			if not original_checksum in shd["requests"]:
-				logger.warning("Received response to unknown checksum %s" % original_checksum)
+			# if entry received from bridge is a "response"
+			if entry['type'] == "response":
+				original_checksum = entry["source_checksum"]
+				if not original_checksum in shd["requests"]:
+					logger.warning("Received response to unknown checksum %s" % original_checksum)
+					continue
+				original_message = shd["requests"][original_checksum]
+				to = str(original_message['data'][0])
+				message = str(entry['data'][0])
+			# if entry received from bridge is an "out" message
+			elif entry['type'] == "out":
+				to = str(entry['data'][0])
+				message = str(entry['data'][1])
+			else:
 				continue
-			original_message = shd["requests"][original_checksum]
-			to = str(original_message['data'][0])
-			message = str(entry['data'][0])
-		# if entry received from bridge is an "out" message
-		elif entry['type'] == "out":
-			to = str(entry['data'][0])
-			message = str(entry['data'][1])
-		else:
-			continue
-		
-		xmpp.send_message(mto=to, mbody=message, mtype='chat')
+			
+			xmpp.send_message(mto=to, mbody=message, mtype='chat')
+
+		# the sleep is really useful to prevent bridge to cap all CPU
+		# this could be increased/decreased (keep an eye on CPU usage)
+		# time.sleep is required to make signal handlers work (they are synchronous in python)
+		time.sleep(0.01)
 
 	xmpp.disconnect(wait=True)
 	logger.info("XMPP connector is closing")

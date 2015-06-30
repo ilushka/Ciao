@@ -44,7 +44,7 @@ class XMPPClient(sleekxmpp.ClientXMPP):
 		self.tls = True if not "tls" in xmpp_params else xmpp_params["tls"]
 		self.ssl = False if not "ssl" in xmpp_params else xmpp_params["ssl"]
 
-		self.auto_reconnect = True
+		#self.auto_reconnect = True
 
 		# The session_start event will be triggered when
 		# the bot establishes its connection with the server

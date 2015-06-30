@@ -68,6 +68,7 @@ class BridgeClient(asyncore.dispatcher_with_send):
 		return False
 
 	def handle_write(self):
+		self.logger.debug("Handle WRITE")
 		entry = self.socket_queue.get()
 
 		# we wait a feedback (status + checksum) from bridge
@@ -77,8 +78,8 @@ class BridgeClient(asyncore.dispatcher_with_send):
 
 	# function to handle socket close
 	def handle_close(self):
-		self.close()
 		self.logger.debug("Handle CLOSE")
+		self.close()
 		return
 
 	# function to handle error over socket (and close it if necessary)
@@ -91,7 +92,7 @@ class BridgeClient(asyncore.dispatcher_with_send):
 		except:
 			self_repr = '<__repr__(self) failed for object at %0x>' % id(self)
 
-		self.logger.error('BridgeSocket - uncaptured python exception %s (%s:%s %s)' % (
+		self.logger.error('BridgeClient - python exception %s (%s:%s %s)' % (
 			self_repr, t, v, tbinfo
 		))
 		self.logger.debug("Handle ERROR")

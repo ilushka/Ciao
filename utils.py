@@ -24,15 +24,9 @@ def flush_terminal(fd):
 	termios.tcflush(fd, termios.TCIOFLUSH)
 
 # setup logger
-def get_logger():
+def get_logger(logname):
 	
-	# setup logging base configuration
-#	logging.basicConfig(
-#		filename = settings.conf['log']['file'],
-#		level=settings.conf['log']['level'],
-#		format=settings.conf['log']['format']
-#	)
-	logger = logging.getLogger("bridge")
+	logger = logging.getLogger(logname)
 	logger.setLevel(settings.conf['log']['level'])
 
 	# create handler for maxsize e logrotation
@@ -41,12 +35,13 @@ def get_logger():
 		maxBytes=settings.conf['log']['maxSize'],
 		backupCount=settings.conf['log']['maxRotate']
 	)
-	#logging.basicConfig(format=settings.conf['log']['format'])
+
+	# setup log format
 	formatter = logging.Formatter(settings.conf['log']['format'])
 	handler.setFormatter(formatter)
 	logger.addHandler(handler)
-	return logger
 
+	return logger
 
 # useful function to print out result (to MCU)
 def out(status, message, data = None):
