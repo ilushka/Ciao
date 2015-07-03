@@ -77,18 +77,48 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 
 
 class BridgeServer(asyncore.dispatcher):
+	# default host to listen
+	host = "localhost"
+	# default port to listen
+	port = 8900
+	# max client to listen for
+	backlog = 1
+	# "bind" status
+	#ready = False
+
 	def __init__(self, conf, shm):
 		asyncore.dispatcher.__init__(self)
 		self.clients = []
 		self.shm = shm
-
-		#creating server socket
-		self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-		self.set_reuse_addr()
-		self.bind((conf['server']['host'], conf['server']['port']))
-		self.listen(conf['backlog'])
-
 		self.logger = logging.getLogger("bridge.server")
+
+		if "host" in conf['server']:
+			self.host = conf['server']['host']
+		if "port" in conf['server']:
+			self.port = conf['server']['port']
+
+		self.backlog = conf['backlog']
+
+		while not self.prepare_socket():
+			self.logger.debug("Waiting for bind retry")
+			time.sleep(10)
+
+	def prepare_socket(self):
+		try:
+			#creating server socket
+			self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+			self.set_reuse_addr()
+
+			self.bind((self.host, self.port))
+		except Exception, e:
+			self.logger.error("Problem creating %s socket: %s" % (__name__, e))
+
+			# closing socket to retry in future
+			self.close()
+			return False
+		else:
+			self.listen(self.backlog)
+			return True
 
 	def handle_accept(self):
 		pair = self.accept()

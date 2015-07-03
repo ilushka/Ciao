@@ -36,10 +36,16 @@ class BridgeClient(asyncore.dispatcher_with_send):
 
 	# register function (useful when connector start or reconnect)
 	def register(self):
-		self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-		params = { "action" : "register", "name" : "xmpp" }
-		self.connect((self.host, self.port))
-		self.socket.send(json.dumps(params))
+		try:
+			self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+			params = { "action" : "register", "name" : "xmpp" }
+			self.connect((self.host, self.port))
+			self.socket.send(json.dumps(params))
+		except Exception, e:
+			self.logger.error("Problem connecting to server: %s" % e)
+			return False
+		else:
+			return True
 
 	# overriding native asyncore function to handle message received via socket
 	def handle_read(self):
@@ -107,7 +113,9 @@ class BridgeThread(Thread):
 		self.daemon = True
 		self.shd = shd
 		self.client = BridgeClient(shd, xmpp_queue, socket_queue)
-		self.client.register()
+		while not self.client.register():
+			# here we could add a max_retry param
+			time.sleep(10)
 
 	def run(self):
 		try:
