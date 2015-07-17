@@ -9,7 +9,7 @@ import json, logging
 from Queue import Queue
 import time
 
-from bridgetools import BridgeThread
+from ciaotools import CiaoThread
 from xmppclient import XMPPClient
 
 # function to handle SIGHUP/SIGTERM
@@ -39,7 +39,7 @@ try:
 	pid = os.fork()
 	if pid > 0:
 		# Save child pid to file and exit parent process
-		runfile = open("/var/run/xmpp-bridge.pid", "w")
+		runfile = open("/var/run/xmpp-ciao.pid", "w")
 		runfile.write("%d" % pid)
 		runfile.close()
 		sys.exit(0)
@@ -66,8 +66,8 @@ if xmpp.connect():
 	
 	shd["requests"] = {}
 
-	bridgeclient = BridgeThread(shd, xmpp_queue, socket_queue)
-	bridgeclient.start()
+	ciaoclient = CiaoThread(shd, xmpp_queue, socket_queue)
+	ciaoclient.start()
 
 	# endless loop until SIGHUP/SIGTERM
 	while shd["loop"] :
@@ -75,7 +75,7 @@ if xmpp.connect():
 			entry = xmpp_queue.get()
 			logger.debug("Entry %s" % entry)
 
-			# if entry received from bridge is a "response"
+			# if entry received from ciao is a "response"
 			if entry['type'] == "response":
 				original_checksum = entry["source_checksum"]
 				if not original_checksum in shd["requests"]:
@@ -84,7 +84,7 @@ if xmpp.connect():
 				original_message = shd["requests"][original_checksum]
 				to = str(original_message['data'][0])
 				message = str(entry['data'][0])
-			# if entry received from bridge is an "out" message
+			# if entry received from ciao is an "out" message
 			elif entry['type'] == "out":
 				to = str(entry['data'][0])
 				message = str(entry['data'][1])
@@ -93,9 +93,9 @@ if xmpp.connect():
 			
 			xmpp.send_message(mto=to, mbody=message, mtype='chat')
 
-		# the sleep is really useful to prevent bridge to cap all CPU
+		# the sleep is really useful to prevent ciao to cap all CPU
 		# this could be increased/decreased (keep an eye on CPU usage)
-		# time.sleep is required to make signal handlers work (they are synchronous in python)
+		# time.sleep is MANDATORY to make signal handlers work (they are synchronous in python)
 		time.sleep(0.01)
 
 	xmpp.disconnect(wait=True)

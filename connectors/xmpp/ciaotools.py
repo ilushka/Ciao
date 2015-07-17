@@ -10,9 +10,7 @@ import json
 from threading import Thread
 from Queue import Queue
 
-#class BridgeHandler(asyncore.dispatcher_with_send):
-
-class BridgeClient(asyncore.dispatcher_with_send):
+class CiaoClient(asyncore.dispatcher_with_send):
 
 	host = "127.0.0.1"
 	port = 8900
@@ -25,13 +23,13 @@ class BridgeClient(asyncore.dispatcher_with_send):
 		self.xmpp_queue = xmpp_queue
 		self.socket_queue = socket_queue
 
-		# load bridge (host, port) configuration if present
+		# load Ciao (host, port) configuration if present
 		# otherwise it will use default
-		if "bridge" in self.shd['conf']:
-			if "host" in self.shd['conf']['bridge']:
-				self.host = self.shd['conf']['bridge']['host']
-			if "port" in self.shd['conf']['bridge']:
-				self.port = self.shd['conf']['bridge']['port']
+		if "ciao" in self.shd['conf']:
+			if "host" in self.shd['conf']['ciao']:
+				self.host = self.shd['conf']['ciao']['host']
+			if "port" in self.shd['conf']['ciao']:
+				self.port = self.shd['conf']['ciao']['port']
 		self.logger = logging.getLogger("xmpp")
 
 	# register function (useful when connector start or reconnect)
@@ -77,7 +75,7 @@ class BridgeClient(asyncore.dispatcher_with_send):
 		self.logger.debug("Handle WRITE")
 		entry = self.socket_queue.get()
 
-		# we wait a feedback (status + checksum) from bridge
+		# we wait a feedback (status + checksum) from ciao
 		self.write_pending = True
 		self.data_pending = entry
 		self.send(json.dumps(entry))
@@ -98,7 +96,7 @@ class BridgeClient(asyncore.dispatcher_with_send):
 		except:
 			self_repr = '<__repr__(self) failed for object at %0x>' % id(self)
 
-		self.logger.error('BridgeClient - python exception %s (%s:%s %s)' % (
+		self.logger.error('CiaoClient - python exception %s (%s:%s %s)' % (
 			self_repr, t, v, tbinfo
 		))
 		self.logger.debug("Handle ERROR")
@@ -107,12 +105,12 @@ class BridgeClient(asyncore.dispatcher_with_send):
 	def exit(self):
 		raise asyncore.ExitNow('Connector is quitting!')
 
-class BridgeThread(Thread):
+class CiaoThread(Thread):
 	def __init__(self, shd, xmpp_queue, socket_queue):
 		Thread.__init__(self)
 		self.daemon = True
 		self.shd = shd
-		self.client = BridgeClient(shd, xmpp_queue, socket_queue)
+		self.client = CiaoClient(shd, xmpp_queue, socket_queue)
 		while not self.client.register():
 			# here we could add a max_retry param
 			time.sleep(10)
@@ -122,7 +120,7 @@ class BridgeThread(Thread):
 			asyncore.loop(0.05)
 		except asyncore.ExitNow, e:
 			logger = logging.getLogger("xmpp")
-			logger.error("Exception asyncore.ExitNow, closing BridgeSocket. (%s)" % e)
+			logger.error("Exception asyncore.ExitNow, closing CiaoSocket. (%s)" % e)
 
 	def stop(self):
 		#self.socket.exit()
