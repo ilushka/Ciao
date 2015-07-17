@@ -4,7 +4,7 @@ import json
 
 from utils import *
 
-class BridgeHandler(asyncore.dispatcher_with_send):
+class CiaoHandler(asyncore.dispatcher_with_send):
 	def __init__(self, sock, name, shm):
 		asyncore.dispatcher_with_send.__init__(self, sock)
 		self.name = name
@@ -12,11 +12,11 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 		self.shm[self.name].register()
 		self.checksum = ""
 		self.data = ""
-		self.logger = logging.getLogger("bridge.handler." + self.name)
+		self.logger = logging.getLogger("ciao.handler." + self.name)
 		self.logger.debug('Started')
 
 	#this function must return true only if we have something
-	# to write - through socket - to the bridge connector
+	# to write - through socket - to the ciao connector
 	def writable(self):
 		checksum, entry = self.shm[self.name].stash_get("out")
 		if checksum:
@@ -76,7 +76,7 @@ class BridgeHandler(asyncore.dispatcher_with_send):
 		self.handle_close()
 
 
-class BridgeServer(asyncore.dispatcher):
+class CiaoServer(asyncore.dispatcher):
 	# default host to listen
 	host = "localhost"
 	# default port to listen
@@ -90,7 +90,7 @@ class BridgeServer(asyncore.dispatcher):
 		asyncore.dispatcher.__init__(self)
 		self.clients = []
 		self.shm = shm
-		self.logger = logging.getLogger("bridge.server")
+		self.logger = logging.getLogger("ciao.server")
 
 		if "host" in conf['server']:
 			self.host = conf['server']['host']
@@ -142,7 +142,7 @@ class BridgeServer(asyncore.dispatcher):
 						self.logger.error('Connector %s already registered' % data['name'])
 						sock.close()
 					else:
-						handler = BridgeHandler(sock, data['name'], self.shm)
+						handler = CiaoHandler(sock, data['name'], self.shm)
 						self.clients.append(handler)
 			except ValueError, e:
 				self.logger.error('Exception: new client not presented properly %s' % hello)
@@ -155,5 +155,5 @@ class BridgeServer(asyncore.dispatcher):
 				c.send(message)
 
 def init(conf, shm):
-	server = BridgeServer(conf, shm)
+	server = CiaoServer(conf, shm)
 	asyncore.loop(0.05)

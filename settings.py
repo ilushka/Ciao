@@ -20,7 +20,7 @@ conf = {
 		"connectors" : "connectors/"
 	},
 	"log": {
-		"file" : "bridge.log",
+		"file" : "ciao.log",
 		"level" : "debug",
 		"format" : "%(asctime)s %(levelname)s %(name)s - %(message)s",
 		"maxSize" : 1 , # maxSize is expressed in MBytes

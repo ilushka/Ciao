@@ -5,11 +5,11 @@ from subprocess import check_call
 import settings
 from utils import *
 
-class BridgeConnector(object):
+class CiaoConnector(object):
 	def __init__(self, name, conf, registered = False):
 		self.name = name
 		self.registered = registered
-		self.logger = logging.getLogger("bridge.connector." + self.name)
+		self.logger = logging.getLogger("ciao.connector." + self.name)
 		self.load_conf(conf)
 
 		#interactions stash
@@ -24,8 +24,8 @@ class BridgeConnector(object):
 		#TODO
 		# we must provide conf validation (to prevent typos or missing params)
 		# type can be:
-		#  managed - started/stopped from bridge
-		#  standalone - processes with their own "lives" that connect to bridge if available
+		#  managed - started/stopped from ciao
+		#  standalone - processes with their own "lives" that connect to ciao if available
 		self.type = conf['type']
 		if self.type == "managed":
 			self.managed_start = conf['commands']['start']

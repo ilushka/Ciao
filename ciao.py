@@ -10,8 +10,8 @@ import atexit
 
 import settings
 from utils import *
-from bridgeconnector import BridgeConnector
-import bridgeserver
+from ciaoconnector import CiaoConnector
+import ciaoserver
 
 #function to handle OS signals
 def signal_handler(signum, frame):
@@ -21,7 +21,7 @@ def signal_handler(signum, frame):
 	keepcycling = False
 
 #opening logfile
-logger = get_logger("bridge")
+logger = get_logger("ciao")
 
 #loading configuration for connectors
 settings.load_connectors(logger)
@@ -34,21 +34,20 @@ if not "connectors" in settings.conf or len(settings.conf["connectors"]) == 0:
 #creating shared dictionary
 shd = {}
 
-#start bridgeserver (to interact with connectors)
-server = Thread(name="server", target=bridgeserver.init, args=(settings.conf,shd,))
+#start ciaoserver thread (to interact with connectors)
+server = Thread(name="server", target=ciaoserver.init, args=(settings.conf,shd,))
 server.daemon = True
 server.start()
 
-#we start connectors after bridgeserver (so they can register themselves)
+#we start MANAGED connectors after ciaoserver (so they can register properly)
 for connector, connector_conf in settings.conf['connectors'].items():
-	shd[connector] = BridgeConnector(connector, connector_conf)
+	shd[connector] = CiaoConnector(connector, connector_conf)
 
 	# connector must start after it has been added to shd,
-	# it can register on if listed in shd
+	# it can register only if listed in shd
 	shd[connector].start()
 
-#TODO
-# would be great to start another thread to control bridge status
+#IDEAS: would be great to start another thread to control bridge status
 
 #variable to "mantain control" over while loop
 keepcycling = True
@@ -60,15 +59,15 @@ signal.signal(signal.SIGTERM, signal_handler) #SIGTERM - 15
 
 #acquiring stream for receiving/sending command from MCU
 if settings.use_fakestdin:
-	print "Starting bridge in DEBUG MODE"
-	logger.debug("Starting bridge in DEBUG MODE")
+	print "Starting Ciao in DEBUG MODE"
+	logger.debug("Starting Ciao in DEBUG MODE")
 
 	handle = io.open(settings.basepath + "fake.stdin", "r+b")
 else:
 	#disable echo on terminal 
 	enable_echo(sys.stdin, False)
 
-	#allow terminal echo to be enabled back when bridge exits
+	#allow terminal echo to be enabled back when ciao exits
 	atexit.register(enable_echo, sys.stdin.fileno(), True)
 	handle = io.open(sys.stdin.fileno(), "rb")
 	flush_terminal(sys.stdin)
@@ -88,14 +87,14 @@ while keepcycling:
 			if connector == False:
 				logger.warning("unknown command: %s" % cmd)
 				out(-1, "unknown_command")
-			elif connector == "bridge": #internal commands
+			elif connector == "ciao": #internal commands
 				params = cmd.split(";",2)
 				if len(params) != 3:
 					out(-1, "unknown_command")
 					continue
 				if action == "r" and params[2] == "status": #read status
 					out(1, "running")
-				elif action == "w" and params[2] == "quit": #stop bridge
+				elif action == "w" and params[2] == "quit": #stop ciao
 					out(1, "done")
 					keepcycling = False
 			elif not connector in settings.conf['connectors']:
@@ -104,7 +103,7 @@ while keepcycling:
 			else:
 				shd[connector].run(action, cmd)
 
-		# the sleep is really useful to prevent bridge to cap all CPU
+		# the sleep is really useful to prevent ciao to "cap" all CPU
 		# this could be increased/decreased (keep an eye on CPU usage)
 		time.sleep(0.01)
 
