@@ -9,7 +9,7 @@ import json, logging
 from Queue import Queue
 import time
 
-from ciaotools import CiaoThread
+from xmppciao import XMPPCiao
 from xmppclient import XMPPClient
 
 # function to handle SIGHUP/SIGTERM
@@ -66,7 +66,7 @@ if xmpp.connect():
 	
 	shd["requests"] = {}
 
-	ciaoclient = CiaoThread(shd, xmpp_queue, socket_queue)
+	ciaoclient = XMPPCiao(shd, xmpp_queue, socket_queue)
 	ciaoclient.start()
 
 	# endless loop until SIGHUP/SIGTERM
@@ -84,7 +84,7 @@ if xmpp.connect():
 				original_message = shd["requests"][original_checksum]
 				to = str(original_message['data'][0])
 				message = str(entry['data'][0])
-			# if entry received from ciao is an "out" message
+			# else if entry received from ciao is an "out" message
 			elif entry['type'] == "out":
 				to = str(entry['data'][0])
 				message = str(entry['data'][1])

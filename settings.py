@@ -6,7 +6,7 @@ basepath = os.path.dirname(os.path.abspath(__file__)) + os.sep
 #enable/disable fake.stdin - TESTING PURPOSE
 # atm this params has to be set to True only
 # if you want to use a file as stdin instead of the real one
-use_fakestdin = False
+use_fakestdin = True
 
 #configuration dictionary
 conf = {
