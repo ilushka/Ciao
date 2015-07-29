@@ -100,7 +100,10 @@ class CiaoConnector(object):
 			self.logger.warning("Connector %s does not implement %s" % (self.name, action))
 			out(0, "no_action")
 		else:
-			required_params = self.implements[action]['params']
+			required_params = settings.base_params[action]
+			if "has_params" in self.implements[action] and self.implements[action]['has_params']:
+				required_params += 1 
+			
 			params = command.split(";", required_params)
 			#TODO
 			# after split we could check if len(params) match expected required_params value

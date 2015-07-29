@@ -3,11 +3,6 @@ import os, logging, json
 #basepath to look for conf/connectors/whatelse
 basepath = os.path.dirname(os.path.abspath(__file__)) + os.sep
 
-#enable/disable fake.stdin - TESTING PURPOSE
-# atm this params has to be set to True only
-# if you want to use a file as stdin instead of the real one
-use_fakestdin = True
-
 #configuration dictionary
 conf = {
 	"server": {
@@ -35,13 +30,25 @@ actions_map = {
 	"wr": "writeresponse" #usually requires 4 params - connector;action;reference;data
 }
 
+#this is the number of default params the MCU will pass to Ciao
+base_params = { 
+	"read" : 2, # connector_name + action
+	"write" : 2, # connector_name + action
+	"writeResponse" : 3, # connector_name + action + checksum
+}
+
 #serialization settings
 # ASCII code for GroupSeparator (non-printable char)
 entry_separator = chr(30)
 # ASCII code for UnitSeparator (non-printable char)
 keyvalue_separator = chr(31)
 
-#DO NOT CHANGE ANYTHING BELOW (UNLESS YOU ARE REALLY SURE)
+#enable/disable fake.stdin - TESTING PURPOSE
+# atm this params has to be set to True only
+# if you want to use a file as stdin instead of the real one
+use_fakestdin = False
+
+#DO NOT CHANGE ANYTHING BELOW (UNLESS YOU ARE KNOW EXACTLY WHAT YOU'RE DOING)
 
 #adjust some settings about paths
 if not conf['paths']['conf'].startswith(os.sep): #relative path
