@@ -34,7 +34,7 @@ actions_map = {
 base_params = { 
 	"read" : 2, # connector_name + action
 	"write" : 2, # connector_name + action
-	"writeResponse" : 3, # connector_name + action + checksum
+	"writeresponse" : 3, # connector_name + action + checksum
 }
 
 #serialization settings
@@ -43,7 +43,7 @@ entry_separator = chr(30)
 # ASCII code for UnitSeparator (non-printable char)
 keyvalue_separator = chr(31)
 
-#enable/disable fake.stdin - TESTING PURPOSE
+#enable/disable fake.stdin - FOR TESTING PURPOSE
 # atm this params has to be set to True only
 # if you want to use a file as stdin instead of the real one
 use_fakestdin = False
