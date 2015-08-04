@@ -50,9 +50,6 @@ ciao_queue = Queue()
 #TODO remove this var
 params = shd["conf"]["params"]
 
-if not "qos" in params or not params["qos"]:
-	shd["conf"]["params"]["qos"] = 2
-
 try:
 	mqttclient = MQTTClient(shd["conf"]["params"], ciao_queue)
 except Exception, e:

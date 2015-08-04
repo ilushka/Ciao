@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+from Queue import Queue
 import paho.mqtt.client as mqtt
 
 class MQTTClient():
@@ -7,7 +8,7 @@ class MQTTClient():
 	subscribed_topic = []
 
 	def __init__(self, mqtt_params, ciao_queue):
-		#validate params - START (we need to make it before super.__init__)
+		#validate params - START
 		missing_params = []
 		required_params = ["host", "port"]
 		for p in required_params:
@@ -18,14 +19,20 @@ class MQTTClient():
 			raise RuntimeError("MQTT configuration error, missing: %s" % ",".join(missing_params))
 
 		if not mqtt_params["client_id"]:
-			mqtt_params['client_id'] = "mqttconnector-pub"
+			mqtt_params['client_id'] = "mqttclient-pub"
 
 		if not mqtt_params["clean_session"]:
 			mqtt_params['clean_session'] = True
+
+		if not "qos" in mqtt_params or not mqtt_params["qos"]:
+			mqtt_params["qos"] = 2
+
 		#validate params - END
 
-		#NB you can't use self before __init__ on parent class
-		#mqtt.Client.__init__(self, mqtt_params['client_id'])
+		#reference to Queue for exchanging data with CiaoCore
+		self.ciao_queue = ciao_queue
+
+		#local instance of MQTT Client
 		self.handle = mqtt.Client(mqtt_params["client_id"], mqtt_params["clean_session"])
 		self.handle.on_connect = self.on_connect
 		self.handle.on_message = self.on_message
@@ -36,10 +43,15 @@ class MQTTClient():
 		self.client_id = mqtt_params["client_id"]
 		self.host = mqtt_params["host"]
 		self.port = mqtt_params["port"]
+		self.qos = mqtt_params["qos"]
 
-		#TODO we need to add will_set (to establish something to do on LastWill and Testament, for unwanted disconnection)
-		#TODO implements authentication params
-		self.ciao_queue = ciao_queue
+		#SET authentication params (retrieved from configuration file under mqtt/mqtt.json.conf)
+		if mqtt_params["username"] and mqtt_params["password"]:
+			self.handle.username_pw_set(str(mqtt_params["username"]), str(mqtt_params["password"]))
+
+		#SET LWT (Last Will & Testament) params for unwanted disconnection
+		if mqtt_params["lwt_topic"] and mqtt_params["lwt_message"]:
+			self.handle.will_set(str(mqtt_params["lwt_topic"]), str(mqtt_params["lwt_message"], qos=self.qos)
 
 	def on_connect(self, client, userdata, flags, rc):
 		print "Connected with result code "+str(rc)
@@ -56,7 +68,7 @@ class MQTTClient():
 	def connect(self):
 		if self.handle.connect(self.host, self.port, 60) == 0:
 			for topic in self.subscribed_topic:
-				self.handle.subscribe(str(topic), qos=0)
+				self.handle.subscribe(str(topic), qos=self.qos)
 			self.handle.loop_start()
 			return True
 		return False
