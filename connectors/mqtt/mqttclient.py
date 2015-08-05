@@ -51,7 +51,7 @@ class MQTTClient():
 
 		#SET LWT (Last Will & Testament) params for unwanted disconnection
 		if mqtt_params["lwt_topic"] and mqtt_params["lwt_message"]:
-			self.handle.will_set(str(mqtt_params["lwt_topic"]), str(mqtt_params["lwt_message"], qos=self.qos)
+			self.handle.will_set(str(mqtt_params["lwt_topic"]), str(mqtt_params["lwt_message"]), qos=self.qos)
 
 	def on_connect(self, client, userdata, flags, rc):
 		print "Connected with result code "+str(rc)
