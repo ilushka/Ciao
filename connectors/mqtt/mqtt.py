@@ -22,7 +22,7 @@
 # Copyright 2015 Arduino Srl (http://www.arduino.org/)
 # 
 # authors:
-# * Giuseppe Arrigo <giuseppe [at] arduino.org>
+# _giuseppe[at]arduino[dot]org
 #
 ###
 
@@ -60,8 +60,8 @@ shd["conf"] = json.loads(json_conf)
 try:
 	pid = os.fork()
 	if pid > 0:
-		# Save child pid to file and exit parent process
-		runfile = open("/var/run/xmpp-ciao.pid", "w")
+		# Save child PID to file and exit parent process
+		runfile = open("/var/run/mqtt-ciao.pid", "w")
 		runfile.write("%d" % pid)
 		runfile.close()
 		sys.exit(0)
@@ -72,9 +72,6 @@ except OSError, e:
 
 mqtt_queue = Queue()
 ciao_queue = Queue()
-
-#TODO remove this var
-params = shd["conf"]["params"]
 
 try:
 	mqttclient = MQTTClient(shd["conf"]["params"], ciao_queue)
@@ -87,7 +84,7 @@ signal.signal(signal.SIGHUP, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
 if mqttclient.connect():
-	#logger.info("Connected to %s" % .host)
+	logger.info("Connected to %s" % shd['conf']['params']['host'])
 	
 	shd["requests"] = {}
 
@@ -119,4 +116,4 @@ if mqttclient.connect():
 	sys.exit(0)
 
 else:
-	logger.critical("Unable to connect to %s" % params["host"])
+	logger.critical("Unable to connect to %s" % shd["conf"]["params"]["host"])

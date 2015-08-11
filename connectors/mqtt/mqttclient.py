@@ -21,12 +21,13 @@
 # Copyright 2015 Arduino Srl (http://www.arduino.org/)
 # 
 # authors:
-# * Giuseppe Arrigo <giuseppe [at] arduino.org>
+# _giuseppe[at]arduino[dot]org
 #
 ###
 
 from Queue import Queue
 import paho.mqtt.client as mqtt
+import logging
 
 class MQTTClient():
 
@@ -35,16 +36,13 @@ class MQTTClient():
 	def __init__(self, mqtt_params, ciao_queue):
 		#validate params - START
 		missing_params = []
-		required_params = ["host", "port"]
+		required_params = ["host", "port", "client_id"]
 		for p in required_params:
 			if not p in mqtt_params:
 				missing_params.append(p)
 
 		if len(missing_params) > 0:
 			raise RuntimeError("MQTT configuration error, missing: %s" % ",".join(missing_params))
-
-		if not mqtt_params["client_id"]:
-			mqtt_params['client_id'] = "mqttclient-pub"
 
 		if not mqtt_params["clean_session"]:
 			mqtt_params['clean_session'] = True
@@ -78,13 +76,16 @@ class MQTTClient():
 		if mqtt_params["lwt_topic"] and mqtt_params["lwt_message"]:
 			self.handle.will_set(str(mqtt_params["lwt_topic"]), str(mqtt_params["lwt_message"]), qos=self.qos)
 
+		self.logger = logging.getLogger("mqtt.client")
+
 	def on_connect(self, client, userdata, flags, rc):
-		print "Connected with result code "+str(rc)
-		#TODO log connection status
+		self.logger.info ("Connected to MQTT broker with result code %s" % str(rc))
+		for topic in self.subscribed_topic:
+			if topic: #prevent issues from specifying empty topic
+				self.handle.subscribe(str(topic), qos=self.qos)
 
 	def on_message(self, client, userdata, msg):
-		#print msg.topic + " " + str(msg.payload)
-		#TODO log msg content
+		self.logger.debug("Got new message. Topic: %s Message: %s" % (str(msg.topic), str(msg.payload)))
 		entry = {
 			"data" : [str(msg.topic), str(msg.payload)]
 		}
@@ -92,8 +93,6 @@ class MQTTClient():
 
 	def connect(self):
 		if self.handle.connect(self.host, self.port, 60) == 0:
-			for topic in self.subscribed_topic:
-				self.handle.subscribe(str(topic), qos=self.qos)
 			self.handle.loop_start()
 			return True
 		return False
@@ -102,5 +101,8 @@ class MQTTClient():
 		self.handle.loop_stop()
 		self.handle.disconnect()
 
-	def publish(self, topic, message, qos=2):
-		self.handle.publish(topic, message, qos)
+	def publish(self, topic, message, qos):
+		if not qos:
+			qos = self.qos
+		self.logger.debug("Publishing message. Topic: %s Message: %s" % (topic, str(message)))
+		self.handle.publish(topic, str(message), qos)

@@ -21,7 +21,7 @@
 # Copyright 2015 Arduino Srl (http://www.arduino.org/)
 # 
 # authors:
-# * Giuseppe Arrigo <giuseppe [at] arduino.org>
+# _giuseppe[at]arduino[dot]org
 #
 ###
 
