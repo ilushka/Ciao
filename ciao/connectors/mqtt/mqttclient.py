@@ -47,7 +47,7 @@ class MQTTClient():
 		if not mqtt_params["clean_session"]:
 			mqtt_params['clean_session'] = True
 
-		if not "qos" in mqtt_params or not mqtt_params["qos"]:
+		if not "qos" in mqtt_params:
 			mqtt_params["qos"] = 2
 
 		#validate params - END
