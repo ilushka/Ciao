@@ -101,7 +101,7 @@ class MQTTClient():
 		self.handle.loop_stop()
 		self.handle.disconnect()
 
-	def publish(self, topic, message, qos):
+	def publish(self, topic, message, qos=None):
 		if not qos:
 			qos = self.qos
 		self.logger.debug("Publishing message. Topic: %s Message: %s" % (topic, str(message)))
