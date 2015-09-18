@@ -5,7 +5,7 @@ Simple but effective library in Python to make MCU communicate with "outside Wor
 
 **Arduino Ciao** is a easy-to-use and powerful technology that enables Arduino sketches to communicate intuitively with the "outside World". It aims to simplify interaction between microcontroller and Linino OS allowing a variety of connections with most common protocols, third-party services and social networks.
 
-Arduino Ciao is open-source and distributed under GNU license: feel free to read it, suggest improvements, provide feedbacks and develop new features.
+Arduino Ciao is open-source and distributed under MIT license: feel free to read it, suggest improvements, provide feedbacks and develop new features.
 
 More information about Arduino Ciao project can be found at http://labs.arduino.org/Ciao
 
@@ -17,4 +17,4 @@ Arduino Ciao is made of two main parts:
 
 **Ciao Core** has been developed to be largely configurable and modular: everyone can develop new modules (we call them *connectors*) to allow the MCU to interact with new network protocols, third-party services or platforms. 
 
-To understand better the **Ciao Core** architecture and settings please visit: http://labs.arduino.org/Ciao+CPU
+Details about **Ciao Core** architecture are available in the [Arduino wiki](http://labs.arduino.org/Ciao+CPU)
