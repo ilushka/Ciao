@@ -128,9 +128,11 @@ class CiaoConnector(object):
 			out(0, "no_action")
 		else:
 			required_params = settings.base_params[action]
-			if "has_params" in self.implements[action] and self.implements[action]['has_params']:
-				required_params += 1 
-			
+			if not "has_params" in self.implements[action] or not self.implements[action]['has_params']:
+				required_params -= 1
+
+			#split has a "weird" behavior, the number passed (required_params) indicates
+			#the count of matches of the character should be found (i.e. 2 will split the string in three parts)			
 			params = command.split(";", required_params)
 			#TODO
 			# after split we could check if len(params) match expected required_params value
@@ -145,7 +147,7 @@ class CiaoConnector(object):
 
 			#action from MCU to the "world"
 			elif self.implements[action]['direction'] == 'out':
-				message = params[required_params - 1]
+				message = params[required_params]
 				checksum = get_checksum(message, False)
 
 				data = unserialize(message, False)
@@ -167,7 +169,7 @@ class CiaoConnector(object):
 
 			#action is a request from MCU aiming to get a result
 			elif self.implements[action]['direction'] == 'result':
-				message = params[required_params - 1]
+				message = params[required_params]
 				checksum = get_checksum(message)
 				if not checksum in self.stash:
 					result = { 
