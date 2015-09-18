@@ -1,4 +1,4 @@
-##Arduino Ciao Library (CPU/MIPS side)
+##Arduino Ciao (CPU/MIPS side)
 Simple but effective library in Python to make MCU communicate with "outside World".
 
 ###What is Arduino Ciao?
@@ -9,9 +9,12 @@ Arduino Ciao is open-source and distributed under GNU license: feel free to read
 
 More information about Arduino Ciao project can be found at http://labs.arduino.org/Ciao
 
-###Arduino Ciao Core/Arduino Ciao (CPU/MIPS side)
+###Arduino Ciao (CPU/MIPS side) - Ciao Core
 
-Arduino Ciao is made of two main parts: the library usable inside *sketches* written in C (http://labs.arduino.org/Ciao+MCU) and a library developed in python that runs on the CPU/MIPS side of the board.
-**Arduino Ciao Core** has been developed to be largely configurable and modular: everyone can develop new modules (we call them *connectors*) to allow the MCU to interact with new network protocols, third-party services or platforms. 
+Arduino Ciao is made of two main parts:
+ * the [Ciao Library](http://labs.arduino.org/Ciao+MCU) - usable inside *sketches*, it''s written in C (source code available [here](https://github.com/arduino-org/CiaoMCU))
+ * the **Ciao Core** - a library developed in python that runs on the CPU/MIPS side of the board.
+
+**Ciao Core** has been developed to be largely configurable and modular: everyone can develop new modules (we call them *connectors*) to allow the MCU to interact with new network protocols, third-party services or platforms. 
 
 To understand better the **Ciao Core** architecture and settings please visit: http://labs.arduino.org/Ciao+CPU
