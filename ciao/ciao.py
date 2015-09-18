@@ -71,7 +71,7 @@ for connector, connector_conf in settings.conf['connectors'].items():
 	# it can register only if listed in shd
 	shd[connector].start()
 
-#IDEAS: would be great to start another thread to control bridge status
+#TODO: maybe we can start another thread to control Ciao Core status
 
 #variable to "mantain control" over while loop
 keepcycling = True

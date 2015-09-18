@@ -50,7 +50,7 @@ conf = {
 	}
 }
 
-#map of actions accepted from bridge(MCU-side)
+#map of actions accepted from Ciao Library (MCU-side)
 actions_map = {
 	"r": "read", #usually requires 2/3 params - connector;action;data(optional)
 	"w": "write", #usuallyrequires 3 params - connector;action;data

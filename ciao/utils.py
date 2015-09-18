@@ -46,7 +46,7 @@ def enable_echo(fd, enabled):
 	termios.tcsetattr(fd, termios.TCSANOW, new_attr)
 
 # flush stdin before starting service
-# it prevents answering to requests sent before bridge's up
+# it prevents answering to requests sent before Ciao Core is really up and running
 def flush_terminal(fd):
 	termios.tcflush(fd, termios.TCIOFLUSH)
 
