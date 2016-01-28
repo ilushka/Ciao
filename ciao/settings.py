@@ -45,7 +45,7 @@ conf = {
 		"file" : "ciao.log",
 		"level" : "debug",
 		"format" : "%(asctime)s %(levelname)s %(name)s - %(message)s",
-		"maxSize" : 1 , # maxSize is expressed in MBytes
+		"maxSize" : 0.1 , # maxSize is expressed in MBytes
 		"maxRotate" : 5 # maxRotate expresses how much time logfile has to be rotated before deletion
 	}
 }

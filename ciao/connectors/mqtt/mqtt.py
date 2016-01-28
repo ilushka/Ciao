@@ -34,6 +34,7 @@ import time
 from mqttciao import MQTTCiao
 from mqttclient import MQTTClient
 import paho.mqtt.client as mqtt
+import ciaotools
 
 # function to handle SIGHUP/SIGTERM
 def signal_handler(signum, frame):
@@ -48,8 +49,7 @@ shd["loop"] = True
 shd["basepath"] = os.path.dirname(os.path.abspath(__file__)) + os.sep
 
 #init log
-logging.basicConfig(filename=shd["basepath"]+"mqtt.log", level=logging.DEBUG)
-logger = logging.getLogger("mqtt")
+logger = ciaotools.get_logger("mqtt")
 
 #read configuration
 # TODO: verify configuration is a valid JSON

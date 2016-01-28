@@ -33,6 +33,7 @@ import time
 import urllib, urllib2
 
 from phantciao import PhantCiao
+import ciaotools
 
 # function to handle SIGHUP/SIGTERM
 def signal_handler(signum, frame):
@@ -74,8 +75,7 @@ shd["loop"] = True
 shd["basepath"] = os.path.dirname(os.path.abspath(__file__)) + os.sep
 
 #init log
-logging.basicConfig(filename=shd["basepath"]+"phant.log", level=logging.DEBUG)
-logger = logging.getLogger("phant")
+logger = ciaotools.get_logger("phant")
 
 #read configuration
 # TODO: verify configuration is a valid JSON

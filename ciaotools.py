@@ -31,18 +31,20 @@ import json, time
 
 from threading import Thread
 from Queue import Queue
+from logging.handlers import RotatingFileHandler
 
 class CiaoThread(Thread, asyncore.dispatcher_with_send):
 
 	# "name" must be specified in __init__ method
 	name = "ciaothread"
 
+	#ciao server (default) configuration
 	host = "127.0.0.1"
 	port = 8900
 	write_pending = False
 	data_pending = None
 
-	def __init__(self, shd, connector_queue, ciao_queue):
+	def __init__(self, shd, connector_queue, ciao_queue = None):
 		Thread.__init__(self)
 		self.daemon = True
 
@@ -62,7 +64,9 @@ class CiaoThread(Thread, asyncore.dispatcher_with_send):
 				self.host = self.shd['conf']['ciao']['host']
 			if "port" in self.shd['conf']['ciao']:
 				self.port = self.shd['conf']['ciao']['port']
-		self.logger = logging.getLogger(self.name)
+
+		# setup logger
+		self.logger = logger.getLogger(self.name)
 
 		while not self.register():
 			# IDEAS: here we could add a max_retry param
@@ -116,3 +120,53 @@ class CiaoThread(Thread, asyncore.dispatcher_with_send):
 		))
 		self.logger.debug("Handle ERROR")
 		return
+
+def get_logger(logname, logfile = None, userconf = None):
+
+	#logging (default) configuration
+	conf = {
+		# level can be: debug, info, warning, error, critical
+		"level" : "warning",
+		"format" : "%(asctime)s %(levelname)s %(name)s - %(message)s",
+		# max_size is expressed in MB
+		"max_size" : 0.1,
+		# max_rotate expresses how much time logfile has to be rotated before deletion 
+		"max_rotate" : 5 
+	}
+
+	# MAP
+	# log levels implemented by logging library
+	# to "readable" levels
+	DLEVELS = {
+		'debug': logging.DEBUG,
+		'info': logging.INFO,
+		'warning': logging.WARNING,
+		'error': logging.ERROR,
+		'critical': logging.CRITICAL
+	}
+
+	# LOGGER SETUP
+	# join user configuration with default configuration
+	if userconf and "log" in userconf:
+		conf.update(userconf)
+
+	# if no logfile specified setup the default one
+	if not logfile:
+		logfile = logname+".log"
+
+	logger = logging.getLogger(logname)
+	logger.setLevel(DLEVELS.get(conf['level'], logging.NOTSET))
+
+	# create handler for maxsize e logrotation
+	handler = RotatingFileHandler(
+		logfile,
+		maxBytes=conf['max_size']*1024*1024,
+		backupCount=conf['max_rotate']
+	)
+
+	# setup log format
+	formatter = logging.Formatter(conf['format'])
+	handler.setFormatter(formatter)
+	logger.addHandler(handler)
+
+	return logger

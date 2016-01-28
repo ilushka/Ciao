@@ -26,8 +26,8 @@
 ###
 
 from Queue import Queue
+import time, logging
 import paho.mqtt.client as mqtt
-import logging
 
 class MQTTClient():
 
@@ -52,11 +52,22 @@ class MQTTClient():
 
 		#validate params - END
 
+		#saving local reference to logger
+		self.logger = logging.getLogger("mqtt.client")
+
 		#reference to Queue for exchanging data with CiaoCore
 		self.ciao_queue = ciao_queue
 
 		#local instance of MQTT Client
-		self.handle = mqtt.Client(mqtt_params["client_id"], mqtt_params["clean_session"])
+		while True:
+			try:
+				self.handle = mqtt.Client(mqtt_params["client_id"], mqtt_params["clean_session"])
+			except Exception, e:
+				self.logger.error("Problem with mqtt.Client: %s" % e)
+				time.sleep(1)
+			else:
+				self.logger.debug("MQTT.Client created")
+				break
 		self.handle.on_connect = self.on_connect
 		self.handle.on_message = self.on_message
 
@@ -69,14 +80,14 @@ class MQTTClient():
 		self.qos = mqtt_params["qos"]
 
 		#SET authentication params (retrieved from configuration file under mqtt/mqtt.json.conf)
+		self.logger.debug("Setting username/password...")
 		if mqtt_params["username"] and mqtt_params["password"]:
 			self.handle.username_pw_set(str(mqtt_params["username"]), str(mqtt_params["password"]))
 
 		#SET LWT (Last Will & Testament) params for unwanted disconnection
 		if mqtt_params["lwt_topic"] and mqtt_params["lwt_message"]:
+			self.logger.debug("Setting LWT...")
 			self.handle.will_set(str(mqtt_params["lwt_topic"]), str(mqtt_params["lwt_message"]), qos=self.qos)
-
-		self.logger = logging.getLogger("mqtt.client")
 
 	def on_connect(self, client, userdata, flags, rc):
 		self.logger.info ("Connected to MQTT broker with result code %s" % str(rc))
@@ -92,10 +103,18 @@ class MQTTClient():
 		self.ciao_queue.put(entry)
 
 	def connect(self):
-		if self.handle.connect(self.host, self.port, 60) == 0:
+		self.logger.debug("Connecting to server...")
+		connected = False
+		while not connected:
+			try:
+				if self.handle.connect(self.host, self.port, 60) == 0:
+					connected = True
+			except Exception, e:
+				self.logger.error("Problem creating %s socket: %s" % (__name__, e))
+				time.sleep(2)
+		if connected:
 			self.handle.loop_start()
-			return True
-		return False
+		return connected
 
 	def disconnect(self):
 		self.handle.loop_stop()
