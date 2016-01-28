@@ -66,7 +66,7 @@ class CiaoThread(Thread, asyncore.dispatcher_with_send):
 				self.port = self.shd['conf']['ciao']['port']
 
 		# setup logger
-		self.logger = logger.getLogger(self.name)
+		self.logger = logging.getLogger(self.name)
 
 		while not self.register():
 			# IDEAS: here we could add a max_retry param
