@@ -74,13 +74,13 @@ shd = {}
 shd["loop"] = True
 shd["basepath"] = os.path.dirname(os.path.abspath(__file__)) + os.sep
 
-#init log
-logger = ciaotools.get_logger("phant")
-
 #read configuration
 # TODO: verify configuration is a valid JSON
 json_conf = open(shd["basepath"]+"phant.json.conf").read()
 shd["conf"] = json.loads(json_conf)
+
+#init log
+logger = ciaotools.get_logger("phant", logconf=shd["conf"], logdir=shd["basepath"])
 
 #forking to make process standalone
 try:
@@ -97,13 +97,6 @@ except OSError, e:
 	sys.exit(1)
 
 phant_queue = Queue()
-#ciao_queue = Queue()
-
-#try:
-#	mqttclient = MQTTClient(shd["conf"]["params"], ciao_queue)
-#except Exception, e:
-#	logger.critical("Exception while creating MQTTClient: %s" % e)
-#	sys.exit(1)
 
 signal.signal(signal.SIGINT, signal.SIG_IGN) #ignore SIGINT(ctrl+c)
 signal.signal(signal.SIGHUP, signal_handler)
@@ -111,7 +104,8 @@ signal.signal(signal.SIGTERM, signal_handler)
 	
 shd["requests"] = {}
 params = shd["conf"]["params"]
-#we need to check if all params are set
+
+# we need to check if all params are set
 if not "ssl" in params or params["ssl"] == False:
 	base_url = "http://"
 else:

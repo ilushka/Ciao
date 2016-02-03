@@ -48,13 +48,13 @@ shd = {}
 shd["loop"] = True
 shd["basepath"] = os.path.dirname(os.path.abspath(__file__)) + os.sep
 
-#init log
-logger = ciaotools.get_logger("mqtt")
-
 #read configuration
 # TODO: verify configuration is a valid JSON
 json_conf = open(shd["basepath"]+"mqtt.json.conf").read()
 shd["conf"] = json.loads(json_conf)
+
+#init log
+logger = ciaotools.get_logger("mqtt", logconf=shd["conf"], logdir=shd["basepath"])
 
 #forking to make process standalone
 try:

@@ -25,7 +25,7 @@
 #
 ###
 
-import logging
+import os, logging
 import socket, asyncore
 import json, time
 
@@ -121,12 +121,12 @@ class CiaoThread(Thread, asyncore.dispatcher_with_send):
 		self.logger.debug("Handle ERROR")
 		return
 
-def get_logger(logname, logfile = None, userconf = None):
+def get_logger(logname, logfile = None, logconf = None, logdir = None):
 
 	#logging (default) configuration
 	conf = {
 		# level can be: debug, info, warning, error, critical
-		"level" : "warning",
+		"level" : "info",
 		"format" : "%(asctime)s %(levelname)s %(name)s - %(message)s",
 		# max_size is expressed in MB
 		"max_size" : 0.1,
@@ -147,12 +147,19 @@ def get_logger(logname, logfile = None, userconf = None):
 
 	# LOGGER SETUP
 	# join user configuration with default configuration
-	if userconf and "log" in userconf:
-		conf.update(userconf)
+	if logconf and "log" in logconf:
+		conf.update(logconf['log'])
 
 	# if no logfile specified setup the default one
 	if not logfile:
 		logfile = logname+".log"
+
+	# if user specifies a directory
+	if logdir:
+		# make sure the logdir param ends with /
+		if not logdir.endswith(os.sep):
+			logdir = logdir+os.sep
+		logfile = logdir+logfile
 
 	logger = logging.getLogger(logname)
 	logger.setLevel(DLEVELS.get(conf['level'], logging.NOTSET))
