@@ -32,6 +32,7 @@ import json, time
 from threading import Thread
 from Queue import Queue
 from logging.handlers import RotatingFileHandler
+from json.decoder import WHITESPACE
 
 class CiaoThread(Thread, asyncore.dispatcher_with_send):
 
@@ -120,6 +121,34 @@ class CiaoThread(Thread, asyncore.dispatcher_with_send):
 		))
 		self.logger.debug("Handle ERROR")
 		return
+
+	# this function is really helpful to handle multiple json sent at once from core
+	def decode_multiple(self, data):
+		# force input data into string
+		string = str(data)
+		self.logger.debug("Decoding data from Core: %s" % string)
+
+		# create decoder to identify json strings
+		decoder = json.JSONDecoder()
+		idx = WHITESPACE.match(string, 0).end()
+		self.logger.debug("Decode WHITESPACE match: %d" % idx)
+
+		ls = len(string)
+		result = []
+		while idx < ls:
+			try:
+				obj, end = decoder.raw_decode(string, idx)
+				self.logger.debug("JSON object(%d, %d): %s" % (idx, end, obj))
+				result.append(obj)
+			except ValueError, e:
+				self.logger.debug("ValueError exception: %s" % e)
+
+				#to force functione exit
+				idx = ls
+			else:
+				idx = WHITESPACE.match(string, end).end()
+
+		return result
 
 def get_logger(logname, logfile = None, logconf = None, logdir = None):
 

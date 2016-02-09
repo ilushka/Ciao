@@ -38,8 +38,8 @@ class XMPPCiao(CiaoThread):
 		self.logger.debug("Handle READ")
 		data = self.recv(2048)
 		self.logger.debug("read message: %s" % data)
-		if data:
-			data_decoded = json.loads(data)
+		# calling decode_multiple (from ciaoThread) to handle multiple string at once from Core
+		for data_decoded in self.decode_multiple(data):
 			if "status" in data_decoded:
 				if self.write_pending:
 					self.shd["requests"][data_decoded["checksum"]] = self.data_pending
