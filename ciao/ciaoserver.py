@@ -128,7 +128,7 @@ class CiaoServer(asyncore.dispatcher):
 
 		while not self.prepare_socket():
 			self.logger.debug("Waiting for bind retry")
-			time.sleep(10)
+			time.sleep(1)
 
 	def prepare_socket(self):
 		try:

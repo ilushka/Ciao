@@ -25,24 +25,27 @@
 #
 ###
 
-import logging
+import os, logging
 import socket, asyncore
 import json, time
 
 from threading import Thread
 from Queue import Queue
+from logging.handlers import RotatingFileHandler
+from json.decoder import WHITESPACE
 
 class CiaoThread(Thread, asyncore.dispatcher_with_send):
 
 	# "name" must be specified in __init__ method
 	name = "ciaothread"
 
+	#ciao server (default) configuration
 	host = "127.0.0.1"
 	port = 8900
 	write_pending = False
 	data_pending = None
 
-	def __init__(self, shd, connector_queue, ciao_queue):
+	def __init__(self, shd, connector_queue, ciao_queue = None):
 		Thread.__init__(self)
 		self.daemon = True
 
@@ -62,6 +65,8 @@ class CiaoThread(Thread, asyncore.dispatcher_with_send):
 				self.host = self.shd['conf']['ciao']['host']
 			if "port" in self.shd['conf']['ciao']:
 				self.port = self.shd['conf']['ciao']['port']
+
+		# setup logger
 		self.logger = logging.getLogger(self.name)
 
 		while not self.register():
@@ -116,3 +121,88 @@ class CiaoThread(Thread, asyncore.dispatcher_with_send):
 		))
 		self.logger.debug("Handle ERROR")
 		return
+
+	# this function is really helpful to handle multiple json sent at once from core
+	def decode_multiple(self, data):
+		# force input data into string
+		string = str(data)
+		self.logger.debug("Decoding data from Core: %s" % string)
+
+		# create decoder to identify json strings
+		decoder = json.JSONDecoder()
+		idx = WHITESPACE.match(string, 0).end()
+		self.logger.debug("Decode WHITESPACE match: %d" % idx)
+
+		ls = len(string)
+		result = []
+		while idx < ls:
+			try:
+				obj, end = decoder.raw_decode(string, idx)
+				self.logger.debug("JSON object(%d, %d): %s" % (idx, end, obj))
+				result.append(obj)
+			except ValueError, e:
+				self.logger.debug("ValueError exception: %s" % e)
+
+				#to force functione exit
+				idx = ls
+			else:
+				idx = WHITESPACE.match(string, end).end()
+
+		return result
+
+def get_logger(logname, logfile = None, logconf = None, logdir = None):
+
+	#logging (default) configuration
+	conf = {
+		# level can be: debug, info, warning, error, critical
+		"level" : "info",
+		"format" : "%(asctime)s %(levelname)s %(name)s - %(message)s",
+		# max_size is expressed in MB
+		"max_size" : 0.1,
+		# max_rotate expresses how much time logfile has to be rotated before deletion 
+		"max_rotate" : 5 
+	}
+
+	# MAP
+	# log levels implemented by logging library
+	# to "readable" levels
+	DLEVELS = {
+		'debug': logging.DEBUG,
+		'info': logging.INFO,
+		'warning': logging.WARNING,
+		'error': logging.ERROR,
+		'critical': logging.CRITICAL
+	}
+
+	# LOGGER SETUP
+	# join user configuration with default configuration
+	if logconf and "log" in logconf:
+		conf.update(logconf['log'])
+
+	# if no logfile specified setup the default one
+	if not logfile:
+		logfile = logname+".log"
+
+	# if user specifies a directory
+	if logdir:
+		# make sure the logdir param ends with /
+		if not logdir.endswith(os.sep):
+			logdir = logdir+os.sep
+		logfile = logdir+logfile
+
+	logger = logging.getLogger(logname)
+	logger.setLevel(DLEVELS.get(conf['level'], logging.NOTSET))
+
+	# create handler for maxsize e logrotation
+	handler = RotatingFileHandler(
+		logfile,
+		maxBytes=conf['max_size']*1024*1024,
+		backupCount=conf['max_rotate']
+	)
+
+	# setup log format
+	formatter = logging.Formatter(conf['format'])
+	handler.setFormatter(formatter)
+	logger.addHandler(handler)
+
+	return logger

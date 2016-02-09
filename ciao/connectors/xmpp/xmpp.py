@@ -34,6 +34,7 @@ import time
 
 from xmppciao import XMPPCiao
 from xmppclient import XMPPClient
+import ciaotools
 
 # function to handle SIGHUP/SIGTERM
 def signal_handler(signum, frame):
@@ -47,15 +48,14 @@ shd = {}
 shd["loop"] = True
 shd["basepath"] = os.path.dirname(os.path.abspath(__file__)) + os.sep
 
-#init log
-logging.basicConfig(filename=shd["basepath"]+"xmpp.log", level=logging.DEBUG)
-logger = logging.getLogger("xmpp")
-
 #read configuration
 #TODO
 # verify configuration is a valid JSON
 json_conf = open(shd["basepath"]+"xmpp.json.conf").read()
 shd["conf"] = json.loads(json_conf)
+
+#init log
+logger = ciaotools.get_logger("xmpp", logconf=shd["conf"], logdir=shd["basepath"])
 
 #forking to make process standalone
 try:
