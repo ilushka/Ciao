@@ -105,15 +105,24 @@ class CiaoConnector(object):
 	# put element (hash) identified by "checksum" into stash "destination"
 	# type: out|result|response
 	def stash_put(self, destination, checksum, element):
-		self.stash[checksum] = element
-		self.fifo[destination].append(checksum)
+		if destination == "result":
+			if checksum in self.stash:
+				self.stash[checksum]['result'] = element
+			else:	
+				self.logger.warning("Obtaining result %s for missing checksum (%s)" % (element, checksum))
+		else:
+			self.stash[checksum] = element
+			self.fifo[destination].append(checksum)
 		return
 
 	def has_result(self, checksum):
 		return checksum in self.stash and "result" in self.stash[checksum]
 
-	def get_result(self, checksum):
-		return self.stash[checksum]["result"]
+	def get_result(self, checksum, auto_delete=True):
+		result = self.stash[checksum]["result"]
+		if auto_delete:
+			del self.stash[checksum] 
+		return result
 
 	def run(self, short_action, command):
 		#retrieve real action value from short one (e.g. "r" => "read" )
@@ -174,11 +183,14 @@ class CiaoConnector(object):
 				if not checksum in self.stash:
 					result = { 
 						"type": "result",
-						"data": unserialize(message, False)
+						"data": unserialize(message, False),
+						"checksum": checksum
 					}
 					self.stash_put("out", checksum, result)
 				elif self.has_result(checksum):
 					out(1, checksum, self.get_result(checksum))
+					if checksum in self.stash:
+						self.logger("non ho cancellato %s" % checksum)
 				else:
 					out(0, "no_result")
 			else:
