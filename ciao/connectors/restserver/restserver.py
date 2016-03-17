@@ -28,32 +28,34 @@
 #
 ###
 
-import os, sys, signal,time, httplib
+import os, sys, signal, asyncore, socket, time
 from thread import *
 import json, logging
 from Queue import Queue
 import ciaotools
 
-from restciao import RESTCiao
+from restserverciao import RESTserverCiao
 
 # function to handle SIGHUP/SIGTERM
 
-def http_request(url, method, data, chk):
+def restserver_handler(conn, shd,logger):
 
-	try:
-		conn = httplib.HTTPConnection(url);
-		conn.request(method, data)	
-		handler_conn = conn;
-		response = conn.getresponse()
-		data = response.read()
-		conn.close()
-		entry = {"checksum": chk, "data" : [str(response.status),str(data)]}
-		logger.info("Request answer: %s" % data)
-	except Exception,e:
-		conn.close()
-		entry = {"checksum": chk, "data" : [str("404"),str(e.strerror)]}
-
-	socket_queue.put(entry)
+	message = conn.recv(1024)
+	logger.debug("Message %s" % message)
+	reply = ""
+	if message != "" :
+	 	entry = {"data" : [str(message).rstrip('\r\n')]}
+	 	socket_queue.put(entry)
+		entry = rest_queue.get()
+		if entry['type'] == "response":
+			original_checksum = entry["source_checksum"]
+			if not original_checksum in shd["requests"]:
+				logger.warning("Received response to unknown checksum %s" % original_checksum)
+			original_message = shd["requests"][original_checksum]
+			reply = str(entry['data'][0])
+			logger.debug("data send %s" % reply)
+	conn.send(reply+'\r\n')
+	conn.close()			
 
 def signal_handler(signum, frame):
 	global logger
@@ -70,18 +72,18 @@ shd["basepath"] = os.path.dirname(os.path.abspath(__file__)) + os.sep
 #read configuration
 #TODO
 # verify configuration is a valid JSON
-json_conf = open(shd["basepath"]+"rest.json.conf").read()
+json_conf = open(shd["basepath"]+"restserver.json.conf").read()
 shd["conf"] = json.loads(json_conf)
 #init log
 
-logger = ciaotools.get_logger("rest", logconf=shd["conf"], logdir=shd["basepath"])
+logger = ciaotools.get_logger("restserver", logconf=shd["conf"], logdir=shd["basepath"])
 
 #forking to make process standalone
 try:
 	pid = os.fork()
 	if pid > 0:
 		# Save child pid to file and exit parent process
-		runfile = open("/var/run/rest-ciao.pid", "w")
+		runfile = open("/var/run/restserver-ciao.pid", "w")
 		runfile.write("%d" % pid)
 		runfile.close()
 		sys.exit(0)
@@ -99,53 +101,33 @@ signal.signal(signal.SIGTERM, signal_handler)
 
 shd["requests"] = {}
 
-ciaoclient = RESTCiao(shd, rest_queue, socket_queue)
+ciaoclient = RESTserverCiao(shd, rest_queue, socket_queue)
 ciaoclient.start()
 
-while shd["loop"] :
-	#logger.info("dentro ciclo while")
-	if not rest_queue.empty():
-		entry = rest_queue.get()
-		logger.info("Entry %s" % entry)
+try:
+	HOST = shd["conf"]["params"]["host"]   
+	PORT = shd["conf"]["params"]["port"] # Luci port
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+	try:
+		s.bind((HOST, PORT))
+	except socket.error as msg:
+		logger.error('Bind failed. Error Code : '+ str(msg[0]) +' Message ' + msg[1])
+		sys.exit()	 
+	#Start listening on socket
+	logger.info("REST server connector started")
+	s.listen(10)
+	while shd["loop"] :
+		conn, addr = s.accept()
+		start_new_thread(restserver_handler ,(conn, shd,logger,))
+		#restserver_handler (conn, shd,logger)
 
-		# if entry received from ciao is an "out" message
-		if entry['type'] == "result":
+except Exception, e:
+	s.close()
+	logger.info("Exception while creating REST server: %s" % e)
+	sys.exit(1)
 
-			chk = str(entry['checksum'])
-			if not chk:
-				logger.warning("Missing checksum param, dropping message")
-				continue
-			logger.debug("Checksum: %s" % chk)
-
-			url = str(entry['data'][0])
-			if not url:
-				logger.warning("Missing stream param, dropping message")
-				continue
-
-			data = str(entry['data'][1])
-			if not data:
-				logger.warning("Missing data param, dropping message")
-				continue
-			logger.debug("Data: %s" % data)
-
-			if (len(entry['data']) > 2):
-				method = str(entry['data'][2])
-				if not method:
-					logger.warning("Missing method param, dropping message")
-					continue
-				logger.debug("Key: %s" % method)
-			else:
-				method = "GET"
-
-			http_request(url, method, data, chk)
-
-		else:
-			continue
-
-	# the sleep is really useful to prevent ciao to cap all CPU
-	# this could be increased/decreased (keep an eye on CPU usage)
-	# time.sleep is MANDATORY to make signal handlers work (they are synchronous in python)
-	time.sleep(0.01)
-
-logger.info("REST connector is closing")
-sys.exit(0)
+else:
+	s.close()
+	logger.info("REST server connector is closing")
+	sys.exit(0)
