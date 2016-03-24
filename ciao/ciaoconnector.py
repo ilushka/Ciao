@@ -187,10 +187,10 @@ class CiaoConnector(object):
 						"checksum": checksum
 					}
 					self.stash_put("out", checksum, result)
+					out(0, "no_result")
 				elif self.has_result(checksum):
+					self.logger.debug("providing result for request %s" % checksum)
 					out(1, checksum, self.get_result(checksum))
-					if checksum in self.stash:
-						self.logger("non ho cancellato %s" % checksum)
 				else:
 					out(0, "no_result")
 			else:
