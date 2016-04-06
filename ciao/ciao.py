@@ -24,6 +24,8 @@
 # authors:
 # _giuseppe[at]arduino[dot]org
 #
+# edited 06 Apr 2016 by sergio@arduino.org
+#
 ###
 
 import io, os, sys, signal, re
