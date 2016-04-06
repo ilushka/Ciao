@@ -61,22 +61,22 @@ def check_version(core_req_ver_num, core_ver_num):
 			return True
 		else:
 			return False
-	if operator == ">":
+	elif operator == ">":
 		if comp == 1:
 			return True
 		else:
 			return False
-	if operator == "<":
+	elif operator == "<":
 		if comp == -1:
 			return True
 		else:
 			return False
-	if operator == ">=":
+	elif operator == ">=":
 		if comp >= 0:
 			return True
 		else:
 			return False
-	if operator == "<=":
+	elif operator == "<=":
 		if comp <= 0:
 			return True
 		else:
