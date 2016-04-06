@@ -23,6 +23,8 @@
 # authors:
 # _giuseppe[at]arduino[dot]org
 #
+# edited: 5 Apr 2016 by sergio tomasello <sergio@arduino.org>
+#
 ###
 
 import os, logging
@@ -191,7 +193,7 @@ class CiaoThread(Thread, asyncore.dispatcher_with_send):
 		#roundtrip = time.time() - start
 		#self.logger.debug("time write: %s" % roundtrip)
 
-class CiaoConnector:
+class BaseConnector:
 
 	def __init__(self, name, logger, ciao_conf):
 		# connector name, used also in ciao library (mcu) to indentify the connector, it will be the same
