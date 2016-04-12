@@ -220,6 +220,7 @@ class BaseConnector:
 		self.__shared = {}
 		self.__shared["loop"] = True
 		self.__shared["conf"] = {}
+		self.__shared["requests"] = {}
 		self.__shared["conf"]["ciao"] = ciao_conf
 		self.__shared["conf"]["name"] = self.name
 		#self.__shared["conf"] = self.__conf
