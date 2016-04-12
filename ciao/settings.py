@@ -6,10 +6,10 @@
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -17,9 +17,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-# 
+#
 # Copyright 2015 Arduino Srl (http://www.arduino.org/)
-# 
+#
 # authors:
 # _giuseppe[at]arduino[dot]org
 #
@@ -32,6 +32,7 @@ basepath = os.path.dirname(os.path.abspath(__file__)) + os.sep
 
 #configuration dictionary
 conf = {
+	"core" : "0.0.2",
 	"server": {
 		"host" : "localhost",
 		"port" : 8900
@@ -58,7 +59,7 @@ actions_map = {
 }
 
 #this is the number of default params the MCU will pass to Ciao
-base_params = { 
+base_params = {
 	"read" : 2, # connector_name + action
 	"write" : 2, # connector_name + action
 	"writeresponse" : 3, # connector_name + action + checksum
@@ -117,7 +118,7 @@ def load_connectors(logger):
 						connector_name = conf_plain['name']
 					else:
 						logger.debug("Missing connector name in configuration file(%s)" % conf_file)
-						connector_name = conf_file[:-len(".json.conf")]		
+						connector_name = conf_file[:-len(".json.conf")]
 					if "enabled" in conf_plain and conf_plain['enabled']:
 						conf['connectors'][connector_name] = conf_plain
 						logger.debug("Loaded configuration for %s connector" % connector_name)

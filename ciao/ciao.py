@@ -7,10 +7,10 @@
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -18,15 +18,17 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-# 
+#
 # Copyright 2015 Arduino Srl (http://www.arduino.org/)
-# 
+#
 # authors:
 # _giuseppe[at]arduino[dot]org
 #
+# edited 06 Apr 2016 by sergio@arduino.org
+#
 ###
 
-import io, os, sys, signal
+import io, os, sys, signal, re
 import logging, json
 from threading import Thread
 import time
@@ -43,6 +45,47 @@ def signal_handler(signum, frame):
 	global keepcycling
 	logger.info("Received signal %d" % signum)
 	keepcycling = False
+
+def check_version(core_req_ver_num, core_ver_num):
+	global logger
+	operator = re.sub("[0-9.]", "", core_req_ver_num) #get operators
+	core_req_ver_num = re.sub("[^0-9.]", "", core_req_ver_num) #get numbers
+	#core_ver_num > core_req_ver_num => 1
+	#core_ver_num = core_req_ver_num => 0
+	#core_ver_num < core_req_ver_num => -1
+	comp = __compare(core_ver_num, core_req_ver_num)
+	#logger.info("VERSION CORE REQUIRED: %s - OPERATOR: %s - VERSION CORE CURRENT %s" % (core_req_ver_num, operator, core_ver_num))
+
+	if operator == "=":
+		if comp == 0:
+			return True
+		else:
+			return False
+	elif operator == ">":
+		if comp == 1:
+			return True
+		else:
+			return False
+	elif operator == "<":
+		if comp == -1:
+			return True
+		else:
+			return False
+	elif operator == ">=":
+		if comp >= 0:
+			return True
+		else:
+			return False
+	elif operator == "<=":
+		if comp <= 0:
+			return True
+		else:
+			return False
+
+def __compare(v1, v2):
+	def normalize(v):
+		return [int(x) for x in re.sub(r'(\.0+)*$','', v).split(".")]
+	return cmp(normalize(v1), normalize(v2))
 
 #opening logfile
 logger = get_logger("ciao")
@@ -65,14 +108,19 @@ server.start()
 
 #we start MANAGED connectors after ciaoserver (so they can register properly)
 for connector, connector_conf in settings.conf['connectors'].items():
-	shd[connector] = CiaoConnector(connector, connector_conf)
+	core_version = settings.conf["core"]
+	required_version = connector_conf['core'] if "core" in connector_conf else ">=0.0.0"
 
-	# connector must start after it has been added to shd,
-	# it can register only if listed in shd
-	shd[connector].start()
+	if not ( check_version(required_version, core_version) ):
+		logger.error("Required version of Ciao Core [%s] for the connector %s is not compatible with the working Core version [%s]" %(required_version, connector, core_version ))
+	else:
+		shd[connector] = CiaoConnector(connector, connector_conf)
+		# connector must start after it has been added to shd,
+		# it can register only if listed in shd
+		shd[connector].start()
 
 #TODO: maybe we can start another thread to control Ciao Core status
-
+logger.warning(shd)
 #variable to "mantain control" over while loop
 keepcycling = True
 
@@ -88,7 +136,7 @@ if settings.use_fakestdin:
 
 	handle = io.open(settings.basepath + "fake.stdin", "r+b")
 else:
-	#disable echo on terminal 
+	#disable echo on terminal
 	enable_echo(sys.stdin, False)
 
 	#allow terminal echo to be enabled back when ciao exits
@@ -124,6 +172,9 @@ while keepcycling:
 			elif not connector in settings.conf['connectors']:
 				logger.warning("unknown connector: %s" % cmd)
 				out(-1, "unknown_connector")
+			elif not connector in shd:
+				logger.warning("connector not runnable: %s" % cmd)
+				out(-1, "connector_not_runnable")
 			else:
 				shd[connector].run(action, cmd)
 
