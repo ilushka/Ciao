@@ -48,6 +48,10 @@ conf = {
 		"format" : "%(asctime)s %(levelname)s %(name)s - %(message)s",
 		"maxSize" : 0.1 , # maxSize is expressed in MBytes
 		"maxRotate" : 5 # maxRotate expresses how much time logfile has to be rotated before deletion
+	},
+	"tian": {
+		"baud" : 4000000,
+		"port" : "/dev/ttySAMD"
 	}
 }
 
